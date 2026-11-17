@@ -107,8 +107,13 @@ jobs:
 
       - name: Keep non-prd environments out of search engines
         if: ${{ inputs.environment != 'prd' }}
+        # Added inside the existing /* rule. A second /* rule would replace the
+        # first on Cloudflare Pages and drop the CSP and Referrer-Policy.
         run: |
-          printf '/*\n  X-Robots-Tag: noindex, nofollow\n' >> dist/_headers
+          [ "$(grep -c '^/\*$' dist/_headers)" = 1 ] || { echo "::error::_headers must have exactly one /* rule"; exit 1; }
+          awk '{ print } $0 == "/*" { print "  X-Robots-Tag: noindex, nofollow" }' dist/_headers > dist/_headers.new
+          mv dist/_headers.new dist/_headers
+          cat dist/_headers
 
       - name: Deploy to Cloudflare Pages
         env:
