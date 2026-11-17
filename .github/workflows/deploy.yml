@@ -1,0 +1,140 @@
+# Reusable: put one released version on one environment.
+# Only runs when called. Used by pipeline.yml (normal releases) and version.yml (rollback / redeploy).
+#
+# Per GitHub environment (stg, prd) it needs:
+#   secrets    CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID
+#              CF_ACCESS_CLIENT_ID, CF_ACCESS_CLIENT_SECRET (optional, only if the site is behind Cloudflare Access)
+#   variables  CF_PAGES_PROJECT  the Cloudflare Pages project name
+#              SITE_URL          the URL to smoke-test, e.g. https://watchmetype-stg.pages.dev
+# Approval for prd is a "required reviewers" rule on the prd environment.
+#
+# No `permissions:` block here on purpose: the job inherits them from the
+# caller (read for stg; write for prd, to mark the release as Latest).
+
+name: deploy
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        required: true
+      tag:
+        type: string
+        required: true
+      rollback:
+        description: Deploy even if it is older than what is live, and keep the current blocklist
+        type: boolean
+        default: false
+
+env:
+  WRANGLER_VERSION: 4.164.0
+  WRANGLER_SEND_METRICS: "false"
+
+jobs:
+  deploy:
+    name: ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: ${{ inputs.environment }}
+      url: ${{ vars.SITE_URL }}
+    concurrency:
+      group: deploy-${{ inputs.environment }}
+      cancel-in-progress: false
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ inputs.tag }}
+      TARGET: ${{ inputs.environment }}
+      PROJECT: ${{ vars.CF_PAGES_PROJECT }}
+      SITE_URL: ${{ vars.SITE_URL }}
+      CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+      CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+    steps:
+      - name: Check configuration
+        env:
+          HAS_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+          HAS_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID != '' }}
+        run: |
+          ok=true
+          [ "$HAS_TOKEN" = true ] || { echo "::error::Secret CLOUDFLARE_API_TOKEN is not set on the '$TARGET' environment"; ok=false; }
+          [ "$HAS_ACCOUNT" = true ] || { echo "::error::Secret CLOUDFLARE_ACCOUNT_ID is not set on the '$TARGET' environment"; ok=false; }
+          [ -n "$PROJECT" ] || { echo "::error::Variable CF_PAGES_PROJECT is not set on the '$TARGET' environment"; ok=false; }
+          [ -n "$SITE_URL" ] || { echo "::error::Variable SITE_URL is not set on the '$TARGET' environment"; ok=false; }
+          [[ "$TAG" =~ ^v[0-9]{4}\.[0-9]{2}\.[0-9]{2}-[0-9]+$ ]] || { echo "::error::'$TAG' is not a release tag like v2026.11.17-42"; ok=false; }
+          $ok
+
+      # Tools (smoke test) come from the same version as the bundle.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+
+      - name: Download and verify the release bundle
+        run: |
+          gh release download "$TAG" --pattern 'site.tgz*' --dir release
+          echo "$(cat release/site.tgz.sha256)  release/site.tgz" | sha256sum -c -
+          mkdir dist
+          tar -xzf release/site.tgz -C dist
+          jq . dist/version.json
+          [ "$(jq -r .version dist/version.json)" = "${TAG#v}" ] || { echo "::error::bundle version does not match $TAG"; exit 1; }
+
+      - name: Refuse to replace a newer version
+        if: ${{ !inputs.rollback }}
+        run: |
+          auth=()
+          if [ -n "$CF_ACCESS_CLIENT_ID" ]; then
+            auth=(-H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET")
+          fi
+          live_run="$(curl -fsSL "${auth[@]}" "$SITE_URL/version.json?t=$(date +%s)" 2>/dev/null | jq -r '.run // 0' 2>/dev/null || true)"
+          live_run="${live_run:-0}"
+          this_run="$(jq -r .run dist/version.json)"
+          echo "live run: $live_run · this run: $this_run"
+          if [ "$live_run" -gt "$this_run" ] 2>/dev/null; then
+            echo "::error::$TARGET already runs a newer build (run $live_run). To go back on purpose, use the 'version' workflow."
+            exit 1
+          fi
+
+      - name: Rollback keeps today's blocklist
+        if: ${{ inputs.rollback }}
+        run: |
+          git fetch --depth=1 origin "${{ github.event.repository.default_branch }}"
+          git show FETCH_HEAD:blocklist.json > dist/blocklist.json
+          echo "blocklist.json taken from ${{ github.event.repository.default_branch }} ($(jq length dist/blocklist.json) entries)"
+
+      - name: Keep non-prd environments out of search engines
+        if: ${{ inputs.environment != 'prd' }}
+        run: |
+          printf '/*\n  X-Robots-Tag: noindex, nofollow\n' >> dist/_headers
+
+      - name: Deploy to Cloudflare Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          npx --yes "wrangler@${WRANGLER_VERSION}" pages deploy dist \
+            --project-name="$PROJECT" \
+            --branch=main \
+            --commit-hash="$(jq -r .commit dist/version.json)" \
+            --commit-message="$TAG" \
+            --commit-dirty=true
+
+      - name: Smoke test
+        run: node tools/smoke.mjs "$SITE_URL" --version "${TAG#v}" --env "$TARGET" --wait 180
+
+      - name: Mark the release as live in prd
+        if: ${{ inputs.environment == 'prd' }}
+        run: gh release edit "$TAG" --prerelease=false --latest
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### ${TARGET}: ${TAG} (${{ job.status }})"
+            echo "- Site: ${SITE_URL}"
+            echo "- Pages project: \`${PROJECT}\`"
+            echo "- Rollback run: ${{ inputs.rollback }}"
+          } >> "$GITHUB_STEP_SUMMARY"

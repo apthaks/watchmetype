@@ -1,13 +1,13 @@
 // Post-deploy smoke test. Checks that a deployed site serves every file,
 // sends the security headers, and is running the expected version.
 //
-//   node tools/smoke.mjs <base-url> [--version 2026.11.17-42] [--env dev|production] [--wait 120]
+//   node tools/smoke.mjs <base-url> [--version 2026.11.17-42] [--env stg|prd] [--wait 120]
 //
 // --version  wait (up to --wait seconds) until /version.json reports it
-// --env      dev expects an X-Robots-Tag noindex header; production expects none
+// --env      stg expects an X-Robots-Tag noindex header; prd expects none
 //
 // If CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET are set, they are sent as
-// Cloudflare Access service-token headers (for a dev site behind Access).
+// Cloudflare Access service-token headers (for a stg site behind Access).
 
 const args = process.argv.slice(2);
 const base = (args[0] || '').replace(/\/+$/, '');
@@ -20,7 +20,7 @@ const env = arg('env');
 const waitSec = Number(arg('wait') || 120);
 
 if (!/^https?:\/\//.test(base)) {
-  console.error('usage: node tools/smoke.mjs <base-url> [--version v] [--env dev|production] [--wait s]');
+  console.error('usage: node tools/smoke.mjs <base-url> [--version v] [--env stg|prd] [--wait s]');
   process.exit(2);
 }
 
@@ -63,8 +63,8 @@ check(csp.includes("script-src 'self'") && csp.includes("frame-ancestors 'none'"
 check(home.headers.get('x-content-type-options') === 'nosniff', 'X-Content-Type-Options is nosniff');
 check(home.headers.get('referrer-policy') === 'no-referrer', 'Referrer-Policy is no-referrer');
 const robots = home.headers.get('x-robots-tag') || '';
-if (env === 'dev') check(/noindex/.test(robots), 'dev sends X-Robots-Tag: noindex');
-if (env === 'production') check(!/noindex/.test(robots), 'production is indexable (no noindex header)');
+if (env === 'stg') check(/noindex/.test(robots), 'stg sends X-Robots-Tag: noindex');
+if (env === 'prd') check(!/noindex/.test(robots), 'prd is indexable (no noindex header)');
 
 const about = await get('/about');
 check(about.status === 200 && (await about.text()).includes('<h1>about</h1>'), '/about returns the about page');

@@ -8,7 +8,7 @@ Contributing or working on the code? Read [AGENTS.md](AGENTS.md) first.
 
 ## Run it
 
-Needs Node.js 18+ (only for the dev server and tests). Nothing to install.
+Needs Node.js 26+ (only for the dev server and tests; older versions accept some truncated links that browsers reject, so one codec test fails). Nothing to install.
 
 ```bash
 npm run dev      # http://localhost:8788
