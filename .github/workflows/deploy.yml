@@ -65,7 +65,7 @@ jobs:
           $ok
 
       # Tools (smoke test) come from the same version as the bundle.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.tag }}
 
