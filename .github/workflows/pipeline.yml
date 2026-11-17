@@ -1,0 +1,92 @@
+# Every push to main: test → build a versioned release → deploy to stg →
+# wait for approval → deploy the SAME release to prd.
+#
+# Versions look like 2026.11.17-42 (commit date in UTC, then the run number).
+# Each one becomes a GitHub Release (tag v2026.11.17-42) holding the exact
+# site bundle, so any version can be redeployed later (see version.yml).
+
+name: pipeline
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node --test
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write # create the tag and release
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      tag: ${{ steps.meta.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Work out the version
+        id: meta
+        run: |
+          day="$(TZ=UTC git log -1 --date=format-local:%Y.%m.%d --format=%cd)"
+          version="${day}-${GITHUB_RUN_NUMBER}"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "tag=v${version}" >> "$GITHUB_OUTPUT"
+          echo "Version: ${version}"
+
+      - name: Build
+        run: node tools/build.mjs --version "${{ steps.meta.outputs.version }}" --commit "$GITHUB_SHA" --run "$GITHUB_RUN_NUMBER"
+
+      - name: Package
+        run: |
+          tar -czf site.tgz -C dist .
+          sha256sum site.tgz | cut -d' ' -f1 > site.tgz.sha256
+          echo "sha256 $(cat site.tgz.sha256)"
+
+      - name: Publish the release (a pre-release until it reaches prd)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --target "$GITHUB_SHA" --prerelease --title "$TAG" --generate-notes
+          fi
+          gh release upload "$TAG" site.tgz site.tgz.sha256 --clobber
+          echo "### Built ${TAG}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Commit \`${GITHUB_SHA:0:7}\` · release ${{ github.server_url }}/${{ github.repository }}/releases/tag/${TAG}" >> "$GITHUB_STEP_SUMMARY"
+
+  stg:
+    needs: build
+    permissions:
+      contents: read
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: stg
+      tag: ${{ needs.build.outputs.tag }}
+    secrets: inherit
+
+  prd:
+    needs: [build, stg]
+    permissions:
+      contents: write # mark the release as Latest once it is live
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: prd
+      tag: ${{ needs.build.outputs.tag }}
+    secrets: inherit

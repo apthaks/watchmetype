@@ -45,7 +45,7 @@ tools/serve.mjs       local server that behaves like Pages (/about → about.htm
 tools/build.mjs       builds dist/ from an allowlist, writes version.json, checks links and budget
 tools/smoke.mjs       checks a running site
 tools/blockhash.mjs   prints the blocklist key for a link
-.github/workflows/    test, deploy, rollback
+.github/workflows/    test, pipeline (release), deploy (reusable), version (rollback)
 ```
 
 ## Commands
@@ -56,7 +56,7 @@ tools/blockhash.mjs   prints the blocklist key for a link
 | `npm test` | Run all tests |
 | `npm run build` | Build `dist/` and print sizes |
 | `npm run preview` | Build, then serve `dist/` as deployed |
-| `node tools/smoke.mjs <url> [--version v] [--env dev\|production]` | Smoke-test a running site |
+| `node tools/smoke.mjs <url> [--version v] [--env stg\|prd]` | Smoke-test a running site |
 | `node tools/blockhash.mjs '<link>'` | Print the blocklist key for a link |
 
 ## Easy to get wrong
@@ -96,6 +96,6 @@ tools/blockhash.mjs   prints the blocklist key for a link
 
 ## Deployment
 
-- Merging to `main` tests, builds a GitHub Release `vYYYY.MM.DD-N` with `site.tgz`, deploys to **dev** (`watchmetype-dev`), then deploys the same bundle to **production** (`watchmetype`) after manual approval.
-- Roll back with **Actions → deploy-version**. `/version.json` shows the live version.
+- Merging to `main` tests, builds a GitHub Release `vYYYY.MM.DD-N` with `site.tgz`, deploys to **stg** (`watchmetype-stg`, watchmetype-stg.pages.dev), then deploys the same bundle to **prd** (`watchmetype`) after manual approval. GitHub environments are named `stg` and `prd`.
+- Roll back with **Actions → version**. `/version.json` shows the live version.
 - Never deploy by hand with `wrangler`, never connect the Pages projects to Git, and never rename or delete the production project: shared links depend on its address.

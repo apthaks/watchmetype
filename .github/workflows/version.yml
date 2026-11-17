@@ -1,0 +1,32 @@
+# Manual: put any released version on stg or prd.
+# Use it to roll back, or to re-deploy a version. prd still needs approval.
+# The blocklist always comes from the default branch, so removed posts stay removed.
+
+name: version
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Where to deploy
+        type: choice
+        options: [prd, stg]
+        default: prd
+      tag:
+        description: Release tag to deploy, e.g. v2026.11.17-42 (see the Releases page)
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    permissions:
+      contents: write
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: ${{ inputs.environment }}
+      tag: ${{ inputs.tag }}
+      rollback: true
+    secrets: inherit

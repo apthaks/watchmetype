@@ -1,0 +1,23 @@
+# Pull requests and branches other than main. (main runs the tests inside pipeline.yml.)
+name: test
+
+on:
+  pull_request:
+  push:
+    branches-ignore: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node --test
+      - name: Build check
+        run: node tools/build.mjs
