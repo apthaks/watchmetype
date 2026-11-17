@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>watchmetype</title>
+<meta name="description" content="Write a post and share a link. Anyone who opens it watches the post being typed: every pause, typo and fix.">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#FAFAF7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111111" media="(prefers-color-scheme: dark)">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="watchmetype">
+<meta property="og:title" content="watchmetype">
+<meta property="og:description" content="Write a post and share a link. Anyone who opens it watches the post being typed: every pause, typo and fix.">
+<meta property="og:url" content="https://watchmetype.com/">
+<meta property="og:image" content="https://watchmetype.com/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="/fonts/fraunces-sub.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/style.css">
+<link rel="modulepreload" href="/js/writer.js">
+<link rel="modulepreload" href="/js/player.js">
+<link rel="modulepreload" href="/js/recorder.js">
+<link rel="modulepreload" href="/js/input-guard.js">
+<link rel="modulepreload" href="/js/store.js">
+<link rel="modulepreload" href="/js/codec/index.js">
+<link rel="modulepreload" href="/js/codec/v1.js">
+<link rel="modulepreload" href="/js/codec/bytes.js">
+<script type="module" src="/js/app.js"></script>
+</head>
+<body>
+<header><a class="brand" href="/" data-home>watchmetype</a></header>
+
+<main>
+  <section id="write" hidden>
+    <textarea id="text" rows="6" placeholder="Type something. Anyone with the link can watch you type it." aria-label="Your post" spellcheck="false" autocorrect="off" autocapitalize="sentences" autocomplete="off" data-gramm="false" maxlength="500"></textarea>
+    <div class="row meter">
+      <span id="count">0 / 500</span>
+      <span id="size"></span>
+    </div>
+    <div class="row actions">
+      <button id="new" type="button" hidden>new post</button>
+      <span class="right">
+        <a id="watch" hidden>watch it</a>
+        <button id="share" type="button" disabled>share</button>
+      </span>
+    </div>
+    <p id="hint" class="quiet" role="status"></p>
+    <textarea id="fallback" rows="6" readonly hidden aria-label="Text to copy"></textarea>
+  </section>
+
+  <section id="replay" hidden>
+    <p id="paused" aria-hidden="true">&nbsp;</p>
+    <div id="stage" aria-hidden="true" aria-live="off" hidden></div>
+    <p id="final" class="sr-only"></p>
+    <p id="notice" hidden></p>
+    <div id="controls" class="row" hidden>
+      <span class="set">
+        <button id="toggle" type="button">pause</button>
+        <button type="button" data-speed="1" aria-pressed="true" aria-label="Normal speed">1×</button>
+        <button type="button" data-speed="2" aria-pressed="false" aria-label="Double speed">2×</button>
+        <button type="button" data-speed="5" aria-pressed="false" aria-label="Five times speed">5×</button>
+        <button id="skip" type="button">skip</button>
+        <button id="again" type="button">replay</button>
+      </span>
+    </div>
+    <p id="stats" class="quiet" hidden></p>
+    <p class="row ends">
+      <a id="own" href="/" data-home hidden>type your own →</a>
+      <button id="continue" type="button" hidden>continue editing</button>
+    </p>
+  </section>
+
+  <noscript><p>watchmetype needs JavaScript to record and replay typing.</p></noscript>
+</main>
+
+<footer>watchmetype.com<span>·</span><a href="/about">about</a></footer>
+</body>
+</html>
