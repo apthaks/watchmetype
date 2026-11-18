@@ -52,9 +52,21 @@ for (;;) {
 check(Boolean(live), `/version.json is served${live ? ` (version ${live.version}, commit ${String(live.commit).slice(0, 7)})` : ''}`);
 if (expected) check(live && live.version === expected, `live version is ${expected}`);
 
+// Right after a deploy, some edge locations can still serve the previous
+// HTML for a few seconds even though version.json (never cached) is new.
+// Bust caches with a query string and retry until the page looks current.
+async function fresh(path, looksCurrent) {
+  const until = Date.now() + 60000;
+  for (;;) {
+    const res = await get(`${path}?smoke=${Date.now()}`);
+    const body = await res.text();
+    if (looksCurrent(body) || Date.now() > until) return { res, body };
+    await sleep(5000);
+  }
+}
+
 // 2. Pages and their headers.
-const home = await get('/');
-const html = await home.text();
+const { res: home, body: html } = await fresh('/', (b) => b.includes('rel="canonical"') && b.includes('application/ld+json'));
 check(home.status === 200, `/ returns 200 (got ${home.status})`);
 check(/text\/html/.test(home.headers.get('content-type') || ''), '/ is text/html');
 check(html.includes('id="write"') && html.includes('/js/app.js'), '/ is the watchmetype app shell');
@@ -66,8 +78,9 @@ const robots = home.headers.get('x-robots-tag') || '';
 if (env === 'stg') check(/noindex/.test(robots), 'stg sends X-Robots-Tag: noindex');
 if (env === 'prd') check(!/noindex/.test(robots), 'prd is indexable (no noindex header)');
 
-const about = await get('/about');
-check(about.status === 200 && (await about.text()).includes('<link rel="canonical" href="https://watchmetype.com/about">'), '/about returns the about page');
+const aboutCanonical = '<link rel="canonical" href="https://watchmetype.com/about">';
+const about = await fresh('/about', (b) => b.includes(aboutCanonical));
+check(about.res.status === 200 && about.body.includes(aboutCanonical), '/about returns the about page');
 
 const missing = await get('/this-page-does-not-exist');
 check(missing.status === 404, `unknown paths return 404 (got ${missing.status})`);
