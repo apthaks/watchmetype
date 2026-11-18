@@ -4,52 +4,61 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>about · watchmetype</title>
-<meta name="description" content="How watchmetype records typing, what a replay shows, and what it doesn't.">
+<meta name="description" content="watchmetype replays a post keystroke by keystroke, with every pause, typo and fix, so readers can see it was typed, not pasted. How it works, privacy and questions.">
+<link rel="canonical" href="https://watchmetype.com/about">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#FAFAF7" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#111111" media="(prefers-color-scheme: dark)">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="watchmetype">
 <meta property="og:title" content="about · watchmetype">
-<meta property="og:description" content="How watchmetype records typing, what a replay shows, and what it doesn’t.">
+<meta property="og:description" content="watchmetype replays a post keystroke by keystroke, with every pause, typo and fix, so readers can see it was typed, not pasted.">
 <meta property="og:url" content="https://watchmetype.com/about">
+<meta property="og:locale" content="en_US">
 <meta property="og:image" content="https://watchmetype.com/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="watchmetype: a post being typed, with a blinking caret">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image:alt" content="watchmetype: a post being typed, with a blinking caret">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/icon.png" type="image/png" sizes="192x192">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="preload" href="/fonts/fraunces-sub.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 <header><a class="brand" href="/">watchmetype</a></header>
 
-<main class="prose">
-  <h1>about</h1>
+<main class="page">
+  <h1 class="lead">watchmetype replays your post keystroke by keystroke, so anyone can see it was typed, not pasted.</h1>
 
-  <p>Write a post of up to 500 characters and tap share. You get your text plus a link. Anyone who opens the link watches the post being typed, at the pace you typed it: every pause, typo and fix.</p>
+  <h2>how it works</h2>
+  <p>Write a post of up to 500 characters. Pasting is switched off, so every word has to be typed. Tap share and you get your text plus a link.</p>
+  <p>Anyone who opens the link watches the post being typed at your pace: every pause, typo, deletion and rewrite. Long pauses show as “paused 3 min” instead of making the reader wait.</p>
 
-  <h2>what gets recorded</h2>
-  <p>Each time the text changes, the page notes what was added or removed, where, and how long it had been since the last change. That is all. Pauses longer than three seconds are kept as a single long pause, so a reader sees “paused 3 min” instead of waiting three minutes.</p>
-  <p>Pasting and dropping text are switched off, and so is autocorrect replacing a word for you. If your keyboard inserts a whole word at once, by swipe or by suggestion, the replay shows the whole word arriving at once, because that is what happened.</p>
+  <h2>typed, not pasted</h2>
+  <p>Copy-pasted and AI-generated text arrives all at once. Real typing hesitates, backtracks and fixes itself. A replay shows the words arriving one keystroke at a time, so a reader can judge for themselves how the post was written.</p>
+  <p>It’s a witness, not a proof. A replay shows the text was typed. It can’t show who typed it, or rule out someone retyping words from somewhere else.</p>
 
-  <h2>witnessed, not proven</h2>
-  <p>A replay shows that the text was typed, one edit after another. It doesn’t show who typed it, and it can’t rule out someone retyping words they got elsewhere. Read it as a witness, not as proof.</p>
+  <h2>private by design</h2>
+  <p>Your post lives in the link and nowhere else. The whole recording is packed into the part of the address after the #, which browsers never send to a server. There are no accounts, no database, no tracking and no analytics.</p>
+  <p>That also means a shared link can’t be edited or deleted. In the same browser, opening your own link shows “continue editing”: new edits are added to the recording and you get a new link. The old link keeps showing the old version.</p>
 
-  <h2>where your post lives</h2>
-  <p>In the link, and nowhere else. The whole recording is packed into the part of the address after the <code>#</code>, which browsers never send to a server. There are no accounts, no database and no analytics.</p>
-  <p>That also means a link can’t be edited or taken back once you’ve sent it, and if an app cuts a long link short, the replay won’t open.</p>
-
-  <h2>editing your own post</h2>
-  <p>Your draft and the posts you’ve shared are remembered in this browser only. Open one of your own links here and you’ll see “continue editing”: new edits are added to the end of the recording, and sharing gives you a new link. The old link keeps showing the old version. On another browser or device you’re a reader like anyone else.</p>
-
-  <h2>reporting a post</h2>
-  <p>If a link shows something that shouldn’t be up, send the link to <a href="mailto:report@watchmetype.com">report@watchmetype.com</a>. We can stop a reported post from playing on this site.</p>
-
-  <h2>what you need</h2>
+  <h2>questions</h2>
+  <h3>Does it prove I didn’t use AI?</h3>
+  <p>Not on its own. It shows a human-paced typing session with real pauses and corrections, which is hard to fake but not impossible.</p>
+  <h3>Does it work with swipe typing and other languages?</h3>
+  <p>Yes. It records what changes in the text, not which keys were pressed, so swipe, autocomplete, emoji and input methods for languages like Japanese or Hindi all replay as they happened. A word inserted at once by swipe appears at once.</p>
+  <h3>Why is the link so long?</h3>
+  <p>Because the whole recording is inside it. A 500-character post makes a link of about 1–2 KB.</p>
+  <h3>What do I need?</h3>
   <p>A browser from 2023 or later: Chrome 103, Safari 16.4, Firefox 113, or newer.</p>
 
-  <p><a href="/">watchmetype →</a></p>
+  <h2>report a post</h2>
+  <p>If a link shows something that shouldn’t be up, send it to <a href="mailto:report@watchmetype.com">report@watchmetype.com</a>. We can stop a reported post from playing on this site.</p>
+
+  <p class="next"><a href="/">type your own →</a></p>
 </main>
 
 <footer>watchmetype.com</footer>

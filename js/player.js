@@ -95,15 +95,16 @@ function setLabel(on, sec) {
   labelShown = on;
 }
 
+// One control row that never changes height: the first button is
+// pause / play while running and replay at the end; skip (the last item)
+// gives way to the stats line, right-aligned in the same row.
 function controls() {
-  el.toggle.hidden = ended;
+  if (ended) el.toggle.textContent = played ? 'replay' : 'play';
+  else el.toggle.textContent = playing ? 'pause' : 'play';
   el.skip.hidden = ended;
-  el.toggle.textContent = playing ? 'pause' : 'play';
-  el.again.textContent = played ? 'replay' : 'play';
   for (const b of el.speeds) b.setAttribute('aria-pressed', String(Number(b.dataset.speed) === speed));
   el.stage.classList.toggle('done', ended);
   el.stats.hidden = !ended;
-  el.own.hidden = !ended;
 }
 
 function rewind() {
@@ -183,12 +184,6 @@ function toggle() {
   else play();
 }
 
-function restart() {
-  if (!post) return;
-  rewind();
-  play();
-}
-
 function skip() {
   if (!post || ended) return;
   played = true;
@@ -219,6 +214,7 @@ function start(model) {
   el.keep.hidden = !store.getPost(model.id);
   el.stage.hidden = false;
   el.controls.hidden = false;
+  el.own.hidden = false;
   played = false;
   rewind();
 
@@ -284,7 +280,6 @@ function bind() {
     controls: $('controls'),
     toggle: $('toggle'),
     skip: $('skip'),
-    again: $('again'),
     stats: $('stats'),
     keep: $('continue'),
     own: $('own'),
@@ -298,7 +293,6 @@ function bind() {
 
   el.toggle.addEventListener('click', toggle);
   el.skip.addEventListener('click', skip);
-  el.again.addEventListener('click', restart);
   el.keep.addEventListener('click', keepEditing);
   for (const b of el.speeds) b.addEventListener('click', () => setSpeed(Number(b.dataset.speed)));
   document.addEventListener('keydown', onKey);

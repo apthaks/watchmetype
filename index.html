@@ -4,20 +4,26 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>watchmetype</title>
-<meta name="description" content="Write a post and share a link. Anyone who opens it watches the post being typed: every pause, typo and fix.">
+<meta name="description" content="Write a post and share a link. Anyone who opens it watches you type it, every pause, typo and fix, so they can see it was typed, not pasted.">
+<link rel="canonical" href="https://watchmetype.com/">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#FAFAF7" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#111111" media="(prefers-color-scheme: dark)">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="watchmetype">
 <meta property="og:title" content="watchmetype">
-<meta property="og:description" content="Write a post and share a link. Anyone who opens it watches the post being typed: every pause, typo and fix.">
+<meta property="og:description" content="Write a post and share a link. Anyone who opens it watches you type it, every pause, typo and fix, so they can see it was typed, not pasted.">
+<meta property="og:locale" content="en_US">
 <meta property="og:url" content="https://watchmetype.com/">
 <meta property="og:image" content="https://watchmetype.com/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="watchmetype: a post being typed, with a blinking caret">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image:alt" content="watchmetype: a post being typed, with a blinking caret">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/icon.png" type="image/png" sizes="192x192">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="preload" href="/fonts/fraunces-sub.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/style.css">
 <link rel="modulepreload" href="/js/writer.js">
@@ -29,6 +35,31 @@
 <link rel="modulepreload" href="/js/codec/v1.js">
 <link rel="modulepreload" href="/js/codec/bytes.js">
 <script type="module" src="/js/app.js"></script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://watchmetype.com/#website",
+      "name": "watchmetype",
+      "url": "https://watchmetype.com/"
+    },
+    {
+      "@type": "WebApplication",
+      "name": "watchmetype",
+      "url": "https://watchmetype.com/",
+      "description": "Write a post and share a link. Anyone who opens it watches you type it, every pause, typo and fix, so they can see it was typed, not pasted.",
+      "applicationCategory": "UtilitiesApplication",
+      "operatingSystem": "Any",
+      "browserRequirements": "Chrome 103, Safari 16.4, Firefox 113 or newer",
+      "isAccessibleForFree": true,
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "isPartOf": { "@id": "https://watchmetype.com/#website" }
+    }
+  ]
+}
+</script>
 </head>
 <body>
 <header><a class="brand" href="/" data-home>watchmetype</a></header>
@@ -49,6 +80,11 @@
     </div>
     <p id="hint" class="quiet" role="status"></p>
     <textarea id="fallback" rows="6" readonly hidden aria-label="Text to copy"></textarea>
+    <div class="intro quiet">
+      <h1>show you typed it, not pasted it</h1>
+      <p>Write a post of up to 500 characters and share the link. Anyone who opens it watches your post being typed, at your pace: every pause, typo and fix. Pasting is switched off, so a reader can see the words were typed, not copied in from somewhere else.</p>
+      <p>Nothing is stored. The whole recording lives in the link. <a href="/about">how it works →</a></p>
+    </div>
   </section>
 
   <section id="replay" hidden>
@@ -63,10 +99,9 @@
         <button type="button" data-speed="2" aria-pressed="false" aria-label="Double speed">2×</button>
         <button type="button" data-speed="5" aria-pressed="false" aria-label="Five times speed">5×</button>
         <button id="skip" type="button">skip</button>
-        <button id="again" type="button">replay</button>
       </span>
+      <span id="stats" class="quiet" hidden></span>
     </div>
-    <p id="stats" class="quiet" hidden></p>
     <p class="row ends">
       <a id="own" href="/" data-home hidden>type your own →</a>
       <button id="continue" type="button" hidden>continue editing</button>

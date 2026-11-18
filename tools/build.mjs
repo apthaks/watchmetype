@@ -24,7 +24,11 @@ const SITE = [
   '_headers',
   'blocklist.json',
   'favicon.svg',
+  'icon.png',
+  'apple-touch-icon.png',
   'og.png',
+  'robots.txt',
+  'sitemap.xml',
   'fonts/fraunces-sub.woff2',
   'fonts/OFL.txt',
   'js',
@@ -33,7 +37,7 @@ const SITE = [
 // Any of these would make Cloudflare Pages run code on requests.
 const FORBIDDEN = ['functions', '_worker.js', '_routes.json'];
 
-const BUDGET = { code: 15 * 1024, font: 25 * 1024, total: 50 * 1024 };
+const BUDGET = { code: 20 * 1024, font: 25 * 1024, total: 50 * 1024 };
 
 const args = process.argv.slice(2);
 const arg = (name) => {

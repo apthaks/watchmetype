@@ -4,6 +4,7 @@ import * as writer from './writer.js';
 import * as player from './player.js';
 
 let shown = null;
+const homeTitle = document.title;
 
 function route() {
   const link = location.hash.slice(1);
@@ -15,7 +16,7 @@ function route() {
     player.show(link);
   } else {
     player.hide();
-    document.title = 'watchmetype';
+    document.title = homeTitle;
     writer.show();
   }
 }
