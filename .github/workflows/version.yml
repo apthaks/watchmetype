@@ -3,6 +3,7 @@
 # The blocklist always comes from the default branch, so removed posts stay removed.
 
 name: version
+run-name: "rollback · ${{ inputs.tag }} → ${{ inputs.environment }}"
 
 on:
   workflow_dispatch:
