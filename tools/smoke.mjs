@@ -67,7 +67,7 @@ if (env === 'stg') check(/noindex/.test(robots), 'stg sends X-Robots-Tag: noinde
 if (env === 'prd') check(!/noindex/.test(robots), 'prd is indexable (no noindex header)');
 
 const about = await get('/about');
-check(about.status === 200 && (await about.text()).includes('<h1>about</h1>'), '/about returns the about page');
+check(about.status === 200 && (await about.text()).includes('<link rel="canonical" href="https://watchmetype.com/about">'), '/about returns the about page');
 
 const missing = await get('/this-page-does-not-exist');
 check(missing.status === 404, `unknown paths return 404 (got ${missing.status})`);
@@ -86,11 +86,23 @@ const assets = [
   ['/fonts/fraunces-sub.woff2', /font\/woff2|octet-stream/],
   ['/og.png', /image\/png/],
   ['/favicon.svg', /image\/svg/],
+  ['/icon.png', /image\/png/],
+  ['/apple-touch-icon.png', /image\/png/],
 ];
 for (const [path, type] of assets) {
   const res = await get(path);
   check(res.ok && type.test(res.headers.get('content-type') || ''), `${path} is served`);
 }
+// 4. What search engines read.
+check(html.includes('<link rel="canonical" href="https://watchmetype.com/">'), '/ has its canonical link');
+check(html.includes('application/ld+json'), '/ has structured data');
+const robotsTxt = await get('/robots.txt');
+const robotsBody = robotsTxt.ok ? await robotsTxt.text() : '';
+check(/Sitemap: https:\/\/watchmetype\.com\/sitemap\.xml/.test(robotsBody) && !/Disallow:\s*\/\s*$/m.test(robotsBody), '/robots.txt allows crawling and names the sitemap');
+const sitemap = await get('/sitemap.xml');
+const sitemapBody = sitemap.ok ? await sitemap.text() : '';
+check(sitemapBody.includes('<loc>https://watchmetype.com/</loc>') && sitemapBody.includes('<loc>https://watchmetype.com/about</loc>'), '/sitemap.xml lists / and /about');
+
 const block = await get('/blocklist.json');
 let list = null;
 try {

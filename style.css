@@ -106,10 +106,16 @@ section { animation: fade .5s ease both; }
 }
 .meter { font-variant-numeric: tabular-nums; }
 .actions { min-height: 1.5em; }
-.right { margin-left: auto; display: flex; gap: 24px; }
+.right { margin-left: auto; display: flex; align-items: baseline; gap: 24px; }
 #new, #watch { color: var(--dim); }
 #share { font-size: 16px; }
 #hint { margin: 16px 0 0; min-height: 1.5em; }
+/* Small explanatory text: the home intro and the about page share one look. */
+.intro { margin-top: 72px; }
+.intro, .page { font-size: 14px; line-height: 1.6; }
+.intro h1, .page h2, .page h3 { margin: 0 0 8px; font: inherit; color: var(--fg); }
+.intro p, .page p { margin: 0 0 8px; color: var(--dim); }
+.intro a, .page a { color: var(--fg); }
 
 /* Replay */
 #paused {
@@ -146,8 +152,9 @@ section { animation: fade .5s ease both; }
 .set { display: flex; gap: 20px; flex-wrap: wrap; }
 #controls button { color: var(--dim); }
 #controls #toggle, #controls [aria-pressed="true"] { color: var(--fg); }
-#stats { margin: 24px 0 0; }
-.ends { margin-top: 8px; }
+#controls { flex-wrap: wrap; row-gap: 8px; }
+#stats { margin-left: auto; }
+.ends { margin-top: 24px; }
 #continue { margin-left: auto; }
 
 .sr-only {
@@ -161,12 +168,11 @@ section { animation: fade .5s ease both; }
   white-space: pre-wrap;
 }
 
-/* about */
-.prose { font: 17px/1.65 var(--serif); }
-.prose h1 { font-size: 30px; line-height: 1.25; font-weight: 400; margin: 0 0 32px; }
-.prose h2 { font-size: 19px; font-weight: 400; margin: 40px 0 8px; color: var(--dim); }
-.prose p { margin: 0 0 16px; }
-.prose a { text-decoration: underline; text-underline-offset: 3px; }
+/* about and 404: a serif lead like the post text, then the small text above. */
+.lead { margin: 0 0 56px; font: 19px/1.6 var(--serif); color: var(--fg); }
+.page h2 { margin-top: 40px; }
+.page h3 { margin-top: 20px; }
+.page .next { margin-top: 48px; color: var(--fg); }
 
 @media (max-width: 480px) {
   header { padding-top: 24px; }
