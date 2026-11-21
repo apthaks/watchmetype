@@ -87,8 +87,8 @@ check(missing.status === 404, `unknown paths return 404 (got ${missing.status})`
 
 // 3. Every module and asset the app loads.
 const modules = [
-  'app.js', 'writer.js', 'player.js', 'recorder.js', 'input-guard.js', 'store.js',
-  'codec/index.js', 'codec/v1.js', 'codec/bytes.js',
+  'app.js', 'writer.js', 'player.js', 'recorder.js', 'input-guard.js', 'store.js', 'viewport.js',
+  'time.js', 'codec/index.js', 'codec/v1.js', 'codec/bytes.js',
 ];
 for (const m of modules) {
   const res = await get(`/js/${m}`);
@@ -97,7 +97,6 @@ for (const m of modules) {
 const assets = [
   ['/style.css', /text\/css/],
   ['/fonts/fraunces-sub.woff2', /font\/woff2|octet-stream/],
-  ['/og.png', /image\/png/],
   ['/favicon.svg', /image\/svg/],
   ['/icon.png', /image\/png/],
   ['/apple-touch-icon.png', /image\/png/],

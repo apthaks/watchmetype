@@ -1,10 +1,10 @@
-// Writing screen: textarea + recorder, meter, draft auto-save, share.
-
 import { Recorder, MAX_CHARS, MAX_EVENTS } from './recorder.js';
 import { guard } from './input-guard.js';
 import { encode, decode } from './codec/index.js';
 import { canCompress } from './codec/bytes.js';
 import * as store from './store.js';
+import { revealLine, keyboardSpace } from './viewport.js';
+import { showEdited } from './time.js';
 
 const EPOCH = Date.UTC(2026, 0, 1);
 const SAVE_MS = 300;
@@ -12,22 +12,23 @@ const METER_MS = 500;
 const HINT_MS = 2500;
 const NEAR_EVENTS = MAX_EVENTS * 0.9;
 const NEAR_CHARS = MAX_CHARS - 20;
-const NEAR_BYTES = 2200; // the meter darkens as the link nears 2.5 KB
+const NEAR_BYTES = 2200;
 const LONG_HINT = 'This draft is getting long — share or start fresh.';
 
 const $ = (id) => document.getElementById(id);
 
-let el; // DOM references, filled on first show
-let rec; // Recorder for the current draft
-let meta; // { id, day, at } of the current draft
+let el;
+let rec;
+let meta; // { id, day, at }
 let active = false;
 let composing = false;
 let refreshGuard;
-let built = null; // { n, promise, result } link for the first n events
+let built = null; // { n, promise, result }
 let saveTimer = 0;
 let meterTimer = 0;
 let hintTimer = 0;
 let labelTimer = 0;
+let layoutFrame = 0;
 
 let support = null;
 function supported() {
@@ -49,7 +50,7 @@ function restore() {
   const draft = store.loadDraft();
   if (draft && /^[0-9a-f]{16}$/.test(draft.id) && Number.isInteger(draft.day) && draft.day >= 0) {
     try {
-      const at = draft.at > 0 ? draft.at : Date.now();
+      const at = Number.isFinite(draft.at) && draft.at > 0 && draft.at <= 8.64e15 ? draft.at : Date.now();
       rec = new Recorder(draft.events, Date.now() - at);
       meta = { id: draft.id, day: draft.day, at };
       return;
@@ -72,7 +73,6 @@ function hint(message, sticky) {
   hintTimer = sticky ? 0 : setTimeout(restHint, HINT_MS);
 }
 
-// What the hint line says when nothing else is being announced.
 function restHint() {
   clearTimeout(hintTimer);
   hintTimer = 0;
@@ -80,19 +80,37 @@ function restHint() {
   else el.hint.textContent = rec.events.length >= NEAR_EVENTS ? LONG_HINT : '';
 }
 
-function resize() {
-  el.text.style.height = 'auto';
-  el.text.style.height = el.text.scrollHeight + 'px';
+function layout() {
+  cancelAnimationFrame(layoutFrame);
+  layoutFrame = requestAnimationFrame(() => {
+    const focused = active && document.activeElement === el.text;
+    keyboardSpace(focused);
+    if (!focused || composing) return;
+    // Locate the caret on its wrapped line in the mirror.
+    const node = el.measure.firstChild;
+    if (!node) return;
+    const caret = el.text.selectionDirection === 'backward' ? el.text.selectionStart : el.text.selectionEnd;
+    const at = Math.min(caret, node.length - 1);
+    const range = document.createRange();
+    range.setStart(node, at);
+    range.setEnd(node, at + 1);
+    revealLine(range.getBoundingClientRect());
+    el.text.scrollTop = 0;
+  });
 }
 
-// Build the link for the current events and check it decodes back to the
-// same text. A link that fails the check is never shown or shared.
+function measure() {
+  el.measure.textContent = el.text.value + '\u200b';
+  layout();
+}
+
+// Self-check the link before sharing it.
 function build() {
   const n = rec.events.length;
   if (built && built.n === n) return built.promise;
   const text = rec.text;
   const promise = (async () => {
-    const data = await encode({ id: meta.id, createdDay: meta.day, events: rec.events });
+    const data = await encode({ id: meta.id, createdDay: meta.day, editedAt: meta.at, events: rec.events });
     const back = await decode(data);
     if (back.text !== text) throw new Error('link check failed');
     return { url: `${location.origin}/#${data}`, text };
@@ -113,7 +131,7 @@ function showCount() {
   el.count.textContent = `${n} / ${MAX_CHARS}`;
   el.count.classList.toggle('near', n >= NEAR_CHARS);
   el.share.disabled = !rec.text.trim() || !supported();
-  el.fresh.hidden = !rec.events.length;
+  el.fresh.disabled = !rec.events.length;
 }
 
 async function showSize() {
@@ -134,8 +152,7 @@ async function showSize() {
   }
 }
 
-// Put the recorder's text back when the textarea holds something it refused
-// or cleaned (over a cap, stripped control characters).
+// Restore normalized text if the input was refused or cleaned.
 function reconcile() {
   const want = rec.text;
   const have = el.text.value;
@@ -152,10 +169,11 @@ function onInput(e) {
   rec.input(el.text.value, performance.now());
   if (!composing && !(e && e.isComposing)) reconcile();
   refreshGuard();
-  resize();
+  measure();
   showCount();
   if (rec.events.length === before) return;
   meta.at = Date.now();
+  showEdited(el.edited, meta.at);
   el.fallback.hidden = true;
   el.watch.hidden = true;
   if (!hintTimer) restHint();
@@ -174,6 +192,8 @@ function setLabel(text) {
 
 async function onShare() {
   if (el.share.disabled) return;
+  const source = rec;
+  const n = rec.events.length;
   let ready;
   try {
     ready = built && built.n === rec.events.length && built.result ? built.result : await build();
@@ -181,12 +201,18 @@ async function onShare() {
     hint('That link didn’t check out, so nothing was shared. Try again.');
     return;
   }
+  if (!active || rec !== source) return;
+  if (rec.events.length !== n) {
+    hint('Your draft changed. Share again.');
+    return;
+  }
   const { url, text } = ready;
   store.savePost({ ...meta, events: rec.events });
   save();
   el.watch.href = url;
   el.watch.hidden = false;
-  const message = `${text}\n\nwatchmetype → ${url}`;
+  el.fallback.hidden = true;
+  const message = `${text}\n\nwatch it → ${url}`;
 
   if (navigator.share && matchMedia('(pointer: coarse)').matches) {
     try {
@@ -214,7 +240,8 @@ function onNew() {
   fresh();
   built = null;
   render();
-  el.text.focus();
+  window.scrollTo({ top: 0, behavior: 'auto' });
+  el.text.focus({ preventScroll: true });
 }
 
 function render() {
@@ -223,8 +250,9 @@ function render() {
   el.watch.hidden = true;
   el.share.textContent = 'share';
   refreshGuard();
-  resize();
+  measure();
   showCount();
+  showEdited(el.edited, rec.events.length ? meta.at : null);
   showSize();
   restHint();
 }
@@ -233,7 +261,9 @@ function bind() {
   el = {
     screen: $('write'),
     text: $('text'),
+    measure: $('measure'),
     count: $('count'),
+    edited: $('edited'),
     size: $('size'),
     share: $('share'),
     fresh: $('new'),
@@ -256,7 +286,15 @@ function bind() {
   });
   el.share.addEventListener('click', onShare);
   el.fresh.addEventListener('click', onNew);
-  addEventListener('resize', () => active && resize());
+  el.text.addEventListener('focus', layout);
+  el.text.addEventListener('blur', layout);
+  el.text.addEventListener('select', layout);
+  document.addEventListener('selectionchange', () => {
+    if (active && document.activeElement === el.text) layout();
+  });
+  addEventListener('resize', layout);
+  window.visualViewport?.addEventListener('resize', layout);
+  document.fonts.ready.then(layout);
   addEventListener('pagehide', () => active && save());
   document.addEventListener('visibilitychange', () => {
     if (active && document.visibilityState === 'hidden') save();
@@ -270,13 +308,17 @@ export function show() {
   restore();
   el.screen.hidden = false;
   render();
-  el.text.focus({ preventScroll: true });
   el.text.setSelectionRange(el.text.value.length, el.text.value.length);
+  if (matchMedia('(pointer: fine)').matches) el.text.focus({ preventScroll: true });
+  layout();
 }
 
 export function hide() {
   if (!active) return;
   active = false;
+  if (el.screen.contains(document.activeElement)) document.activeElement.blur();
+  keyboardSpace(false);
+  cancelAnimationFrame(layoutFrame);
   save();
   clearTimeout(meterTimer);
   clearTimeout(hintTimer);

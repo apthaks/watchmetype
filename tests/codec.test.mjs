@@ -198,7 +198,7 @@ test('hostile: hand-built payloads that break each rule', async () => {
 
   const cases = {
     'wrong checksum': { n: 1, sum: sum('b'), T: [0], N: [1], K: 'a' },
-    'nonzero flags': { flags: 1, n: 1, sum: sum('a'), T: [0], N: [1], K: 'a' },
+    'unknown flags': { flags: 2, n: 1, sum: sum('a'), T: [0], N: [1], K: 'a' },
     'huge event count': { n: 0xffffffff, sum: sum('a'), T: [0], N: [1], K: 'a' },
     'too many events': { n: 4001, sum: sum(''), T: Array(4001).fill(0), N: Array(4001).fill(1), K: 'a'.repeat(4001) },
     'event count over timing stream': { n: 2, sum: sum('a'), T: [0], N: [1], K: 'a' },
@@ -258,7 +258,8 @@ test('size budget: a simulated 500-character post stays near 2 KB', async () => 
   const sizes = [];
   for (let i = 0; i < 60; i++) {
     const rec = typist(rand, sentence(rand, 500));
-    sizes.push(('https://watchmetype.com/#' + (await encode(post(rec.events)))).length);
+    const link = await encode({ ...post(rec.events), editedAt: Date.UTC(2026, 10, 22) });
+    sizes.push(('https://watchmetype.com/#' + link).length);
   }
   sizes.sort((a, b) => a - b);
   const median = sizes[sizes.length >> 1];

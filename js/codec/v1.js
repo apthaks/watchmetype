@@ -1,7 +1,8 @@
-// Link format v1. FROZEN once shipped: any change here means a new version file.
+// Link format v1. Frozen after release; pre-release edit-time extension below.
 //
 // payload (before deflate-raw + base64url), integers are unsigned LEB128 varints:
-//   postId 8 bytes · createdDay · flags (0) · nEvents · FNV-1a 32 of final text (big-endian)
+//   postId 8 bytes · createdDay · flags · editedMinute? · nEvents · FNV-1a 32 of final text
+//   flags: bit 0 adds Unix edit minutes; 0 is the original format. Other bits are invalid.
 //   then five streams, each prefixed with its byte length:
 //   T timing  1 byte per event: delay bucket, 255 = long pause
 //   L pauses  seconds, one per long pause
@@ -50,9 +51,10 @@ function isTextChar(ch) {
 
 const isCount = (n) => Number.isInteger(n) && n >= 0;
 
-// post: { id: 16 hex chars, createdDay, events: [{ t, pos, del, ins, pauseSec? }] }
-export async function encode({ id, createdDay, events }) {
+// editedAt is optional for original links; timestamps are stored to the minute.
+export async function encode({ id, createdDay, editedAt, events }) {
   if (!/^[0-9a-f]{16}$/.test(id)) throw new Error('bad post id');
+  if (editedAt != null && !Number.isSafeInteger(editedAt)) throw bad('edited time');
   if (events.length > MAX_EVENTS) throw new Error('too many events');
   const T = new Writer();
   const L = new Writer();
@@ -96,7 +98,8 @@ export async function encode({ id, createdDay, events }) {
   const w = new Writer();
   w.bytes(fromHex(id));
   w.varint(createdDay);
-  w.varint(0);
+  w.varint(editedAt == null ? 0 : 1);
+  if (editedAt != null) w.varint(Math.floor(editedAt / 60000));
   w.varint(events.length);
   const sum = fnv1a(utf8(text.join('')));
   w.byte(sum >>> 24);
@@ -114,7 +117,9 @@ export async function decode(data) {
 
   const id = toHex(r.take(8));
   const createdDay = r.varint();
-  if (r.varint() !== 0) throw bad('flags');
+  const flags = r.varint();
+  if (flags > 1) throw bad('flags');
+  const editedAt = flags ? r.varint() * 60000 : undefined;
   const n = r.varint();
   if (n > MAX_EVENTS) throw bad('events');
   const s = r.take(4);
@@ -182,5 +187,5 @@ export async function decode(data) {
   if (k !== K.length || L.left || N.left || J.left) throw bad('trailing');
   const final = text.join('');
   if (fnv1a(utf8(final)) !== sum) throw bad('checksum');
-  return { id, createdDay, events, text: final };
+  return { id, createdDay, editedAt, events, text: final };
 }

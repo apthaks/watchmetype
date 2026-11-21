@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>watchmetype</title>
-<meta name="description" content="Write a post and share a link. Anyone who opens it watches you type it, every pause, typo and fix, so they can see it was typed, not pasted.">
+<meta name="description" content="Write up to 500 characters and share a typing replay. Watch every pause, typo and edit. No account needed.">
 <link rel="canonical" href="https://watchmetype.com/">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#FAFAF7" media="(prefers-color-scheme: light)">
@@ -12,15 +12,13 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="watchmetype">
 <meta property="og:title" content="watchmetype">
-<meta property="og:description" content="Write a post and share a link. Anyone who opens it watches you type it, every pause, typo and fix, so they can see it was typed, not pasted.">
+<meta property="og:description" content="Watch the typing replay.">
 <meta property="og:locale" content="en_US">
 <meta property="og:url" content="https://watchmetype.com/">
-<meta property="og:image" content="https://watchmetype.com/og.png">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="watchmetype: a post being typed, with a blinking caret">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image:alt" content="watchmetype: a post being typed, with a blinking caret">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:site" content="@watchmetypeapp">
+<meta name="twitter:image" content="https://watchmetype.com/icon.png">
+<meta name="twitter:image:alt" content="watchmetype caret icon">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/icon.png" type="image/png" sizes="192x192">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -31,6 +29,8 @@
 <link rel="modulepreload" href="/js/recorder.js">
 <link rel="modulepreload" href="/js/input-guard.js">
 <link rel="modulepreload" href="/js/store.js">
+<link rel="modulepreload" href="/js/viewport.js">
+<link rel="modulepreload" href="/js/time.js">
 <link rel="modulepreload" href="/js/codec/index.js">
 <link rel="modulepreload" href="/js/codec/v1.js">
 <link rel="modulepreload" href="/js/codec/bytes.js">
@@ -49,10 +49,10 @@
       "@type": "WebApplication",
       "name": "watchmetype",
       "url": "https://watchmetype.com/",
-      "description": "Write a post and share a link. Anyone who opens it watches you type it, every pause, typo and fix, so they can see it was typed, not pasted.",
+      "description": "Write up to 500 characters and share a typing replay. Watch every pause, typo and edit. No account needed.",
       "applicationCategory": "UtilitiesApplication",
       "operatingSystem": "Any",
-      "browserRequirements": "Chrome 103, Safari 16.4, Firefox 113 or newer",
+      "browserRequirements": "CompressionStream and DecompressionStream with deflate-raw support",
       "isAccessibleForFree": true,
       "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
       "isPartOf": { "@id": "https://watchmetype.com/#website" }
@@ -66,13 +66,17 @@
 
 <main>
   <section id="write" hidden>
-    <textarea id="text" rows="6" placeholder="Type something. Anyone with the link can watch you type it." aria-label="Your post" spellcheck="false" autocorrect="off" autocapitalize="sentences" autocomplete="off" data-gramm="false" maxlength="500"></textarea>
+    <p class="eyebrow quiet writing-meta"><span>your words, at your pace</span><time id="edited"></time></p>
+    <div class="editor">
+      <div id="measure" aria-hidden="true"></div>
+      <textarea id="text" rows="1" placeholder="Type what’s on your mind." aria-label="Your post" aria-describedby="writing-note" spellcheck="false" autocorrect="off" autocapitalize="sentences" autocomplete="off" data-gramm="false" maxlength="500"></textarea>
+    </div>
     <div class="row meter">
       <span id="count">0 / 500</span>
       <span id="size"></span>
     </div>
     <div class="row actions">
-      <button id="new" type="button" hidden>new post</button>
+      <button id="new" type="button" disabled>new post</button>
       <span class="right">
         <a id="watch" hidden>watch it</a>
         <button id="share" type="button" disabled>share</button>
@@ -81,36 +85,41 @@
     <p id="hint" class="quiet" role="status"></p>
     <textarea id="fallback" rows="6" readonly hidden aria-label="Text to copy"></textarea>
     <div class="intro quiet">
-      <h1>show you typed it, not pasted it</h1>
-      <p>Write a post of up to 500 characters and share the link. Anyone who opens it watches your post being typed, at your pace: every pause, typo and fix. Pasting is switched off, so a reader can see the words were typed, not copied in from somewhere else.</p>
-      <p>Nothing is stored. The whole recording lives in the link. <a href="/about">how it works →</a></p>
+      <h1>let them watch your words arrive.</h1>
+      <p>Write up to 500 characters, then share a link. Anyone who opens it can watch your post being typed—every pause, typo and edit.</p>
+      <p id="writing-note">Pasting is off. Deleted words stay in the replay.</p>
+      <p>The recording lives in the link. Your draft is saved in this browser. <a href="/about">how it works</a></p>
     </div>
   </section>
 
   <section id="replay" hidden>
+    <p class="eyebrow quiet writing-meta"><span>a thought, taking shape.</span><time id="replay-edited" hidden></time></p>
     <p id="paused" aria-hidden="true">&nbsp;</p>
     <div id="stage" aria-hidden="true" aria-live="off" hidden></div>
     <p id="final" class="sr-only"></p>
     <p id="notice" hidden></p>
-    <div id="controls" class="row" hidden>
-      <span class="set">
+    <div class="playback">
+      <div class="row playback-row">
+        <span id="controls" class="set" hidden>
         <button id="toggle" type="button">pause</button>
         <button type="button" data-speed="1" aria-pressed="true" aria-label="Normal speed">1×</button>
         <button type="button" data-speed="2" aria-pressed="false" aria-label="Double speed">2×</button>
         <button type="button" data-speed="5" aria-pressed="false" aria-label="Five times speed">5×</button>
         <button id="skip" type="button">skip</button>
-      </span>
-      <span id="stats" class="quiet" hidden></span>
+        <button id="follow" type="button" hidden>follow typing</button>
+        </span>
+        <span class="ends">
+          <a id="own" href="/" data-home hidden>type your own</a>
+          <button id="continue" type="button" hidden>continue editing</button>
+        </span>
+      </div>
+      <p id="stats" class="quiet" hidden></p>
     </div>
-    <p class="row ends">
-      <a id="own" href="/" data-home hidden>type your own →</a>
-      <button id="continue" type="button" hidden>continue editing</button>
-    </p>
   </section>
 
   <noscript><p>watchmetype needs JavaScript to record and replay typing.</p></noscript>
 </main>
 
-<footer>watchmetype.com<span>·</span><a href="/about">about</a></footer>
+<footer><span class="footer-note">a witness, not a proof.</span><a href="/about">about watchmetype</a></footer>
 </body>
 </html>

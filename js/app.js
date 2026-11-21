@@ -5,11 +5,14 @@ import * as player from './player.js';
 
 let shown = null;
 const homeTitle = document.title;
+history.scrollRestoration = 'manual';
 
 function route() {
   const link = location.hash.slice(1);
   if (link === shown) return;
   shown = link;
+  // Start a replay at the top, even after a long draft.
+  window.scrollTo({ top: 0, behavior: 'auto' });
   if (link) {
     writer.hide();
     document.title = 'watchmetype';

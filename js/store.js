@@ -1,9 +1,4 @@
-// localStorage wrapper. Every access is wrapped: in private mode or with
-// storage disabled the site still works, it just remembers nothing.
-//
-// wmt:draft  the post being written        { id, day, at, events }
-// wmt:posts  shared posts, oldest first    [{ id, day, at, events }]  (50 kept)
-// `at` is the wall-clock time of the last edit; events are stored as rows.
+// Storage may be unavailable. Posts use { id, day, at, events }, packed as rows.
 
 const DRAFT = 'wmt:draft';
 const POSTS = 'wmt:posts';

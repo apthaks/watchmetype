@@ -1,6 +1,6 @@
 // Version registry. The first character of the link data picks the format.
 // Every decoder returns the same model, which is all the player ever reads:
-//   { id, createdDay, events: [{ t, pos, del, ins, pauseSec? }], text }
+//   { id, createdDay, editedAt?, events: [{ t, pos, del, ins, pauseSec? }], text }
 // New links always use the newest encoder. Old decoders are never removed.
 
 import * as v1 from './v1.js';
