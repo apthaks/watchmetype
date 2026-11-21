@@ -1,10 +1,10 @@
-// Replay screen: decodes the link, then plays the events back on a virtual
-// clock driven by requestAnimationFrame. It only ever reads the decoded
-// model, and puts text on the page only through text nodes.
+// Replay through text nodes on a requestAnimationFrame clock.
 
 import { decode } from './codec/index.js';
 import { canCompress, blockKey } from './codec/bytes.js';
 import * as store from './store.js';
+import { revealLine } from './viewport.js';
+import { showEdited } from './time.js';
 
 const LEAD_MS = 600; // wait before the first character
 const PAUSE_MS = 1200; // how long a long pause plays for
@@ -23,7 +23,6 @@ let el;
 let active = false;
 let token = 0; // bumps on every show/hide so stale async work is dropped
 
-// playback state
 let post = null;
 let steps = []; // [{ at, pos, del, ins: [code points], pause }]
 let chars = [];
@@ -39,6 +38,7 @@ let lastFrame = 0;
 let lastEdit = 0;
 let typing = false;
 let labelShown = false;
+let following = true;
 
 let listCache = null;
 let listTime = 0;
@@ -76,6 +76,19 @@ function duration(ms) {
 function draw() {
   el.before.data = chars.slice(0, cursor).join('');
   el.after.data = chars.slice(cursor).join('');
+  followLine();
+}
+
+function followLine() {
+  if (following && playing && !ended) {
+    revealLine(el.caret.getBoundingClientRect(), el.controls.offsetHeight + 40);
+  }
+}
+
+function stopFollowing() {
+  if (!active || !playing || ended) return;
+  following = false;
+  el.follow.hidden = false;
 }
 
 function apply(step) {
@@ -95,9 +108,6 @@ function setLabel(on, sec) {
   labelShown = on;
 }
 
-// One control row that never changes height: the first button is
-// pause / play while running and replay at the end; skip (the last item)
-// gives way to the stats line, right-aligned in the same row.
 function controls() {
   if (ended) el.toggle.textContent = played ? 'replay' : 'play';
   else el.toggle.textContent = playing ? 'pause' : 'play';
@@ -105,6 +115,7 @@ function controls() {
   for (const b of el.speeds) b.setAttribute('aria-pressed', String(Number(b.dataset.speed) === speed));
   el.stage.classList.toggle('done', ended);
   el.stats.hidden = !ended;
+  el.follow.hidden = following || ended;
 }
 
 function rewind() {
@@ -114,6 +125,7 @@ function rewind() {
   next = 0;
   clock = -LEAD_MS;
   ended = false;
+  following = true;
   playing = false;
   setTyping(false);
   setLabel(false);
@@ -168,6 +180,7 @@ function play() {
   playing = true;
   lastFrame = performance.now();
   controls();
+  followLine();
   frame = requestAnimationFrame(tick);
 }
 
@@ -197,6 +210,7 @@ function setSpeed(value) {
 
 function start(model) {
   post = model;
+  showEdited(el.edited, model.editedAt);
   let at = 0;
   let total = 0;
   let deletions = 0;
@@ -214,8 +228,9 @@ function start(model) {
   el.keep.hidden = !store.getPost(model.id);
   el.stage.hidden = false;
   el.controls.hidden = false;
-  el.own.hidden = false;
+  el.own.hidden = !el.keep.hidden;
   played = false;
+  window.scrollTo({ top: 0, behavior: 'auto' });
   rewind();
 
   if (!steps.length || matchMedia('(prefers-reduced-motion: reduce)').matches) finish();
@@ -227,7 +242,7 @@ function clear() {
   post = null;
   playing = false;
   steps = [];
-  for (const node of [el.stage, el.controls, el.stats, el.notice, el.keep, el.own]) node.hidden = true;
+  for (const node of [el.edited, el.stage, el.controls, el.stats, el.notice, el.keep, el.own]) node.hidden = true;
   el.final.textContent = '';
   el.paused.classList.remove('on');
   labelShown = false;
@@ -240,8 +255,7 @@ function fail(message) {
   el.own.hidden = false;
 }
 
-// Reload this post's saved log into the writing screen. New edits are added
-// to the end, and sharing again keeps the same post id.
+// Continue the saved recording under the same post id.
 function keepEditing() {
   if (!post) return;
   const saved = store.getPost(post.id);
@@ -259,6 +273,7 @@ function keepEditing() {
 
 function onKey(e) {
   if (!active || !post || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End'].includes(e.key)) stopFollowing();
   if (e.key === ' ') {
     if (e.target.closest && e.target.closest('button, a')) return;
     e.preventDefault();
@@ -273,6 +288,7 @@ function onKey(e) {
 function bind() {
   el = {
     screen: $('replay'),
+    edited: $('replay-edited'),
     paused: $('paused'),
     stage: $('stage'),
     final: $('final'),
@@ -280,6 +296,7 @@ function bind() {
     controls: $('controls'),
     toggle: $('toggle'),
     skip: $('skip'),
+    follow: $('follow'),
     stats: $('stats'),
     keep: $('continue'),
     own: $('own'),
@@ -289,13 +306,22 @@ function bind() {
   };
   const caret = document.createElement('span');
   caret.className = 'caret';
+  el.caret = caret;
   el.stage.append(el.before, caret, el.after);
 
   el.toggle.addEventListener('click', toggle);
   el.skip.addEventListener('click', skip);
+  el.follow.addEventListener('click', () => {
+    following = true;
+    el.follow.hidden = true;
+    followLine();
+  });
   el.keep.addEventListener('click', keepEditing);
   for (const b of el.speeds) b.addEventListener('click', () => setSpeed(Number(b.dataset.speed)));
   document.addEventListener('keydown', onKey);
+  document.addEventListener('wheel', stopFollowing, { passive: true });
+  document.addEventListener('touchmove', stopFollowing, { passive: true });
+  addEventListener('resize', () => active && followLine());
 }
 
 export async function show(link) {

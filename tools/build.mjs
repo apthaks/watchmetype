@@ -26,7 +26,6 @@ const SITE = [
   'favicon.svg',
   'icon.png',
   'apple-touch-icon.png',
-  'og.png',
   'robots.txt',
   'sitemap.xml',
   'fonts/fraunces-sub.woff2',
