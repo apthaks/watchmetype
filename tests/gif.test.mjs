@@ -89,13 +89,13 @@ test('GIF layout preserves spaces, blank lines and graphemes; rejects overflowin
   assert.equal(renderer.fits([{ text: 'short' }]), true);
   renderer.draw({ text: '<script>🙂</script>', caret: false, pause: '' });
   assert.ok(drawn.includes('edited 23 Nov 2026 · 12:34 GMT'));
-  assert.ok(drawn.includes('watchmetype.com'));
   assert.ok(drawn.includes('<script>🙂</script>'));
   assert.ok(!drawn.includes('watchmetype'));
   assert.ok(!drawn.includes('a thought, taking shape.'));
   assert.ok(!drawn.includes('a witness, not a proof.'));
   const stamp = positions.find(p => p.text.startsWith('edited '));
   const brand = positions.find(p => p.text === 'watchmetype.com');
+  assert.equal(brand?.text, 'watchmetype.com');
   assert.equal(stamp.y, brand.y);
   assert.ok(stamp.x < brand.x);
   assert.equal(WIDTH, 1200);
