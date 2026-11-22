@@ -1,7 +1,7 @@
 // Router: no hash → writing screen, hash → replay screen.
 
-import * as writer from './writer.js';
-import * as player from './player.js';
+import * as writer from './writer.js?r=2';
+import * as player from './player.js?r=2';
 
 let shown = null;
 const homeTitle = document.title;

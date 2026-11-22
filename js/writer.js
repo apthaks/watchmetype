@@ -1,10 +1,10 @@
-import { Recorder, MAX_CHARS, MAX_EVENTS } from './recorder.js';
-import { guard } from './input-guard.js';
-import { encode, decode } from './codec/index.js';
-import { canCompress } from './codec/bytes.js';
-import * as store from './store.js';
-import { revealLine, keyboardSpace } from './viewport.js';
-import { showEdited } from './time.js';
+import { Recorder, MAX_CHARS, MAX_EVENTS } from './recorder.js?r=2';
+import { guard } from './input-guard.js?r=2';
+import { encode, decode } from './codec/index.js?r=2';
+import { canCompress } from './codec/bytes.js?r=2';
+import * as store from './store.js?r=2';
+import { revealLine, keyboardSpace } from './viewport.js?r=2';
+import { showEdited } from './time.js?r=2';
 
 const EPOCH = Date.UTC(2026, 0, 1);
 const SAVE_MS = 300;
@@ -84,7 +84,7 @@ function layout() {
   cancelAnimationFrame(layoutFrame);
   layoutFrame = requestAnimationFrame(() => {
     const focused = active && document.activeElement === el.text;
-    keyboardSpace(focused);
+    keyboardSpace(active);
     if (!focused || composing) return;
     // Locate the caret on its wrapped line in the mirror.
     const node = el.measure.firstChild;
@@ -94,7 +94,7 @@ function layout() {
     const range = document.createRange();
     range.setStart(node, at);
     range.setEnd(node, at + 1);
-    revealLine(range.getBoundingClientRect());
+    revealLine(range.getBoundingClientRect(), el.tools.offsetHeight + 24);
     el.text.scrollTop = 0;
   });
 }
@@ -262,6 +262,7 @@ function bind() {
     screen: $('write'),
     text: $('text'),
     measure: $('measure'),
+    tools: $('write-tools'),
     count: $('count'),
     edited: $('edited'),
     size: $('size'),
@@ -285,6 +286,9 @@ function bind() {
     if (!el.share.disabled) build().catch(() => {});
   });
   el.share.addEventListener('click', onShare);
+  el.tools.addEventListener('pointerdown', (e) => {
+    if (document.activeElement === el.text && e.target.closest('button, a')) e.preventDefault();
+  });
   el.fresh.addEventListener('click', onNew);
   el.text.addEventListener('focus', layout);
   el.text.addEventListener('blur', layout);
@@ -294,6 +298,7 @@ function bind() {
   });
   addEventListener('resize', layout);
   window.visualViewport?.addEventListener('resize', layout);
+  window.visualViewport?.addEventListener('scroll', () => keyboardSpace(active));
   document.fonts.ready.then(layout);
   addEventListener('pagehide', () => active && save());
   document.addEventListener('visibilitychange', () => {

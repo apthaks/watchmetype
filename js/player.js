@@ -1,10 +1,10 @@
 // Replay through text nodes on a requestAnimationFrame clock.
 
-import { decode } from './codec/index.js';
-import { canCompress, blockKey } from './codec/bytes.js';
-import * as store from './store.js';
-import { revealLine } from './viewport.js';
-import { showEdited } from './time.js';
+import { decode } from './codec/index.js?r=2';
+import { canCompress, blockKey } from './codec/bytes.js?r=2';
+import * as store from './store.js?r=2';
+import { revealLine } from './viewport.js?r=2';
+import { showEdited } from './time.js?r=2';
 
 const LEAD_MS = 600; // wait before the first character
 const PAUSE_MS = 1200; // how long a long pause plays for
@@ -46,7 +46,7 @@ let listTime = 0;
 function blocklist() {
   if (!listCache || Date.now() - listTime > LIST_TTL) {
     listTime = Date.now();
-    listCache = fetch('/blocklist.json')
+    listCache = fetch('/blocklist.json', { cache: 'no-cache' })
       .then((res) => (res.ok ? res.json() : []))
       .then((list) => (Array.isArray(list) ? list : []))
       .catch(() => []);

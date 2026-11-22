@@ -23,18 +23,18 @@
 <link rel="icon" href="/icon.png" type="image/png" sizes="192x192">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="preload" href="/fonts/fraunces-sub.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/style.css">
-<link rel="modulepreload" href="/js/writer.js">
-<link rel="modulepreload" href="/js/player.js">
-<link rel="modulepreload" href="/js/recorder.js">
-<link rel="modulepreload" href="/js/input-guard.js">
-<link rel="modulepreload" href="/js/store.js">
-<link rel="modulepreload" href="/js/viewport.js">
-<link rel="modulepreload" href="/js/time.js">
-<link rel="modulepreload" href="/js/codec/index.js">
-<link rel="modulepreload" href="/js/codec/v1.js">
-<link rel="modulepreload" href="/js/codec/bytes.js">
-<script type="module" src="/js/app.js"></script>
+<link rel="stylesheet" href="/style.css?r=2">
+<link rel="modulepreload" href="/js/writer.js?r=2">
+<link rel="modulepreload" href="/js/player.js?r=2">
+<link rel="modulepreload" href="/js/recorder.js?r=2">
+<link rel="modulepreload" href="/js/input-guard.js?r=2">
+<link rel="modulepreload" href="/js/store.js?r=2">
+<link rel="modulepreload" href="/js/viewport.js?r=2">
+<link rel="modulepreload" href="/js/time.js?r=2">
+<link rel="modulepreload" href="/js/codec/index.js?r=2">
+<link rel="modulepreload" href="/js/codec/v1.js?r=2">
+<link rel="modulepreload" href="/js/codec/bytes.js?r=2">
+<script type="module" src="/js/app.js?r=2"></script>
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -71,16 +71,18 @@
       <div id="measure" aria-hidden="true"></div>
       <textarea id="text" rows="1" placeholder="Type what’s on your mind." aria-label="Your post" aria-describedby="writing-note" spellcheck="false" autocorrect="off" autocapitalize="sentences" autocomplete="off" data-gramm="false" maxlength="500"></textarea>
     </div>
-    <div class="row meter">
-      <span id="count">0 / 500</span>
-      <span id="size"></span>
-    </div>
-    <div class="row actions">
-      <button id="new" type="button" disabled>new post</button>
-      <span class="right">
-        <a id="watch" hidden>watch it</a>
-        <button id="share" type="button" disabled>share</button>
-      </span>
+    <div id="write-tools" class="write-tools">
+      <div class="row meter">
+        <span id="count">0 / 500</span>
+        <span id="size"></span>
+      </div>
+      <div class="row actions">
+        <button id="new" type="button" disabled>new post</button>
+        <span class="right">
+          <a id="watch" hidden>watch it</a>
+          <button id="share" type="button" disabled>share</button>
+        </span>
+      </div>
     </div>
     <p id="hint" class="quiet" role="status"></p>
     <textarea id="fallback" rows="6" readonly hidden aria-label="Text to copy"></textarea>

@@ -7,9 +7,11 @@
   Cache-Control: public, max-age=31536000, immutable
   Content-Type: font/woff2
 /js/*
-  Cache-Control: public, max-age=300
+  Cache-Control: no-cache
+/style.css
+  Cache-Control: no-cache
 /blocklist.json
-  Cache-Control: public, max-age=300
+  Cache-Control: no-cache
   X-Robots-Tag: noindex
 /version.json
   Cache-Control: no-store

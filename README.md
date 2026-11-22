@@ -53,6 +53,8 @@ The layout supports light and dark mode, mobile viewport resizing and reduced mo
 
 Cloudflare Pages serves only the files listed in `tools/build.mjs`. Merging to `main` tests, packages a versioned release and deploys it to staging. Production receives the same bundle after manual approval. Use the **version** workflow for rollbacks.
 
+Scripts and styles revalidate on page loads; revisioned asset URLs bypass older cached files. Fonts remain cached for a year. If deployment smoke checks report stale cache policies, set Cloudflare’s Browser Cache TTL to **Respect Existing Headers**.
+
 Budgets: 20 KB gzipped code, 25 KB font and 50 KB first load. The README GIF in `docs/` is documentation only and isn’t deployed. Local marketing artwork stays in the ignored `marketing/` folder.
 
 Social metadata requests a compact X card with the caret icon. There is no large promotional preview image; each receiving app controls how it displays a link.
