@@ -15,7 +15,7 @@
 import {
   Writer, Reader, utf8, fromUtf8, fnv1a, toHex, fromHex,
   toBase64Url, fromBase64Url, deflateRaw, inflateRaw, bad,
-} from './bytes.js';
+} from './bytes.js?r=2';
 
 const MAX_CHARS = 500;
 const MAX_EVENTS = 4000;

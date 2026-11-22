@@ -36,6 +36,10 @@ const check = (ok, msg) => {
   if (!ok) failures.push(msg);
 };
 const get = (path) => fetch(base + path, { headers, redirect: 'follow' });
+const revalidates = (res) => {
+  const cache = (res.headers.get('cache-control') || '').toLowerCase();
+  return /\bno-cache\b|\bno-store\b/.test(cache) || (/\bmax-age\s*=\s*0\b/.test(cache) && /\bmust-revalidate\b/.test(cache));
+};
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // 1. The expected version is live (deployments can take a few seconds to propagate).
@@ -86,14 +90,25 @@ const missing = await get('/this-page-does-not-exist');
 check(missing.status === 404, `unknown paths return 404 (got ${missing.status})`);
 
 // 3. Every module and asset the app loads.
+// Read the deployed HTML so cache checks use the same query strings as browsers.
+const assetURLs = new Map();
+for (const [, path] of html.matchAll(/(?:href|src)="(\/(?:js\/[^"?#]+\.js|style\.css)(?:\?[^"#]*)?)"/g)) {
+  assetURLs.set(new URL(path, base).pathname, path);
+}
 const modules = [
   'app.js', 'writer.js', 'player.js', 'recorder.js', 'input-guard.js', 'store.js', 'viewport.js',
   'time.js', 'codec/index.js', 'codec/v1.js', 'codec/bytes.js',
 ];
+const staleModules = [];
 for (const m of modules) {
-  const res = await get(`/js/${m}`);
-  check(res.ok && /javascript/.test(res.headers.get('content-type') || ''), `/js/${m} is served as JavaScript`);
+  const path = assetURLs.get(`/js/${m}`);
+  check(Boolean(path), `/js/${m} is referenced by the app shell`);
+  if (!path) continue;
+  const res = await get(path);
+  check(res.ok && /javascript/.test(res.headers.get('content-type') || ''), `${path} is served as JavaScript`);
+  if (!revalidates(res)) staleModules.push(path);
 }
+check(!staleModules.length, `JavaScript cache requires revalidation${staleModules.length ? ` (check Cloudflare Browser Cache TTL: ${staleModules.join(', ')})` : ''}`);
 const assets = [
   ['/style.css', /text\/css/],
   ['/fonts/fraunces-sub.woff2', /font\/woff2|octet-stream/],
@@ -101,9 +116,13 @@ const assets = [
   ['/icon.png', /image\/png/],
   ['/apple-touch-icon.png', /image\/png/],
 ];
-for (const [path, type] of assets) {
+for (const [asset, type] of assets) {
+  const path = asset === '/style.css' ? assetURLs.get(asset) : asset;
+  check(Boolean(path), `${asset} has an asset URL`);
+  if (!path) continue;
   const res = await get(path);
   check(res.ok && type.test(res.headers.get('content-type') || ''), `${path} is served`);
+  if (asset === '/style.css') check(revalidates(res), `${path} cache requires revalidation`);
 }
 // 4. What search engines read.
 check(html.includes('<link rel="canonical" href="https://watchmetype.com/">'), '/ has its canonical link');
@@ -116,6 +135,7 @@ const sitemapBody = sitemap.ok ? await sitemap.text() : '';
 check(sitemapBody.includes('<loc>https://watchmetype.com/</loc>') && sitemapBody.includes('<loc>https://watchmetype.com/about</loc>'), '/sitemap.xml lists / and /about');
 
 const block = await get('/blocklist.json');
+check(revalidates(block), '/blocklist.json cache requires revalidation');
 let list = null;
 try {
   list = await block.json();

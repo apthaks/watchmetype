@@ -54,22 +54,34 @@ test('scrolling: browsers without VisualViewport still reveal the line', (t) => 
   assert.deepEqual(scrolls, [74]);
 });
 
-test('keyboard: reserve document space through the stylesheet and clear it on blur', (t) => {
+test('keyboard: reserve space, track the visible bottom during panning, and reset outside the writer', (t) => {
   browser(t, { height: 400.5, offsetTop: 80, scale: 1 });
-  let value;
-  const style = { setProperty: (name, v) => { assert.equal(name, '--keyboard-space'); value = v; } };
+  const values = new Map();
+  let writes = 0;
+  const style = { setProperty: (name, value) => { values.set(name, value); writes++; } };
   const sheet = { href: 'http://localhost:8788/style.css', cssRules: [], insertRule: () => { sheet.cssRules.push({ style }); return 0; } };
   global(t, 'document', { documentElement: { clientHeight: 800 }, styleSheets: [sheet] });
   keyboardSpace(true);
-  assert.equal(value, '400px');
+  assert.equal(values.get('--keyboard-space'), '400px');
+  assert.equal(values.get('--keyboard-bottom'), '320px');
+  const before = writes;
+  keyboardSpace(true);
+  assert.equal(writes, before, 'unchanged bounds do not trigger more style writes');
+  window.visualViewport.offsetTop = 100;
+  keyboardSpace(true);
+  assert.equal(values.get('--keyboard-space'), '400px');
+  assert.equal(values.get('--keyboard-bottom'), '300px');
   window.visualViewport.height = 800;
   keyboardSpace(true);
-  assert.equal(value, '0px');
+  assert.equal(values.get('--keyboard-space'), '0px');
+  assert.equal(values.get('--keyboard-bottom'), '0px');
   window.visualViewport.height = 400;
   window.visualViewport.scale = 2;
   keyboardSpace(true);
-  assert.equal(value, '0px');
+  assert.equal(values.get('--keyboard-space'), '0px');
+  assert.equal(values.get('--keyboard-bottom'), '0px');
   window.visualViewport.scale = 1;
   keyboardSpace(false);
-  assert.equal(value, '0px');
+  assert.equal(values.get('--keyboard-space'), '0px');
+  assert.equal(values.get('--keyboard-bottom'), '0px');
 });

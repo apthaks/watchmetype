@@ -73,16 +73,18 @@ tools/                serve, build, smoke, blockhash
 - **The decoder is defensive.** Every length, jump and delete is bounds-checked, inflate is capped at 64 KB, and the checksum must match. Failures are always a `LinkError`, never another exception. Add a hostile test for any new field.
 - **New served files** go in `SITE` in `tools/build.mjs`, or they won't deploy. New JS modules also go in `tools/smoke.mjs` and the `modulepreload` links.
 - **Fonts are cached for a year.** Changing the font means a new file name.
+- **JS/CSS and the blocklist revalidate on request.** Keep their `Cache-Control: no-cache` headers; the player caches blocklist data in memory for five minutes. After deployment, smoke checks must confirm the live cache policy. In Cloudflare, Browser Cache TTL should respect existing headers; an override can serve outdated decoders even after a release.
+- **Browser asset revision:** JS imports, module preloads and stylesheet links currently use `?r=2` to bypass old cached assets. Keep those references consistent. This is an asset cache key, separate from the recording’s `#1` link format.
 - **Don't change `blockKey()`**, or existing blocklist entries stop matching.
 - **Autocorrect replacement is blocked.** If it breaks typing on iOS, set `BLOCK_REPLACEMENT = false` in `js/input-guard.js`.
 - **Edit timestamps:** v1 flags `0` means an original link; flag `1` adds a varint of Unix minutes before the event count. Other flags are invalid. `editedAt` is optional on decoded models; never substitute the current time for a missing replay timestamp. Use `js/time.js` on both screens. The timestamp comes from the writer’s device clock.
-- **Scrolling:** writer and replay use document scrolling. Keep the active line visible with `js/viewport.js`, respect pinch zoom and let viewers stop following playback to scroll manually.
+- **Scrolling:** writer and replay use document scrolling. Keep the writer’s meter and actions above the keyboard using the visual viewport’s height and offset. Leave room for them when revealing the caret. Viewport panning must reposition controls without forcing the document back to the caret. Respect pinch zoom and let viewers stop following playback to scroll manually.
 
 ## Sharing and interface
 
 - The agreed share message is the finished post, one blank line, then `watch it → FULL_URL`. Keep this format unchanged unless requested.
 - Keep one **share** action: mobile share sheet where available, otherwise clipboard with a manual-copy fallback. Do not add a separate copy-link button unless requested.
-- Writer: `your words, at your pace`. Replay: `a thought, taking shape.`. Show the last-edited date and GMT time on the right using the same formatter.
+- Writer: `your words, at your pace`. Replay: `a thought, taking shape.`. Use the same last-edited GMT date/time formatter on both screens: right-aligned on desktop, stacked below the tagline and left-aligned on small screens.
 - Authors with a locally saved recording see **continue editing**; other viewers see **type your own**. These are mutually exclusive, on the right of the playback controls. Grey replay stats sit below that row.
 - `marketing/` stays ignored. Copy any README artwork into `docs/`; documentation assets do not belong in the deploy allowlist.
 
@@ -112,4 +114,4 @@ tools/                serve, build, smoke, blockhash
 
 ## Known gaps
 
-- No real-device testing yet: iOS keyboards, Gboard, Samsung Keyboard, Japanese and Hindi input, link survival in WhatsApp and X.
+- Real-device coverage is incomplete: retest iOS keyboard scrolling after fixes, plus Gboard, Samsung Keyboard, Japanese and Hindi input, and link survival in WhatsApp and X.

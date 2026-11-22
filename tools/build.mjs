@@ -103,7 +103,8 @@ for (const page of walk(out).filter((f) => f.endsWith('.html'))) {
 for (const file of walk(join(out, 'js')).filter((f) => f.endsWith('.js'))) {
   const src = readFileSync(file, 'utf8');
   for (const [, spec] of src.matchAll(/(?:import|export)[^'"]*?from\s*'([^']+)'/g)) {
-    const target = spec.startsWith('/') ? join(out, spec) : resolve(dirname(file), spec);
+    const path = spec.split(/[?#]/)[0];
+    const target = path.startsWith('/') ? join(out, path) : resolve(dirname(file), path);
     if (!existsSync(target)) fail(`${relative(out, file)} imports ${spec}, which is not in dist`);
   }
 }

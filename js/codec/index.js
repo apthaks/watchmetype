@@ -3,8 +3,8 @@
 //   { id, createdDay, editedAt?, events: [{ t, pos, del, ins, pauseSec? }], text }
 // New links always use the newest encoder. Old decoders are never removed.
 
-import * as v1 from './v1.js';
-import { LinkError } from './bytes.js';
+import * as v1 from './v1.js?r=2';
+import { LinkError } from './bytes.js?r=2';
 
 export { LinkError };
 

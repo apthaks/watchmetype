@@ -11,20 +11,22 @@ export function revealLine(rect, bottomInset = 24) {
 }
 
 let keyboardRule;
-let keyboardHeight = -1;
-
-export function keyboardSpace(focused) {
+let keyboardState;
+export function keyboardSpace(active) {
   const view = window.visualViewport;
-  const height = focused && view && Math.abs(view.scale - 1) < 0.01
+  const height = active && view && Math.abs(view.scale - 1) < 0.01
     ? Math.max(0, document.documentElement.clientHeight - view.height) : 0;
-  const next = Math.ceil(height);
-  if (next === keyboardHeight) return;
+  const space = Math.ceil(height);
+  const bottom = Math.ceil(Math.max(0, height - (view?.offsetTop || 0)));
+  const state = `${space},${bottom}`;
+  if (state === keyboardState) return;
   // Use the same-origin stylesheet's CSSOM, not inline styles (strict CSP).
   if (!keyboardRule) {
     const sheet = [...document.styleSheets].find((s) => s.href && new URL(s.href).pathname === '/style.css');
     if (!sheet) return;
     keyboardRule = sheet.cssRules[sheet.insertRule(':root { --keyboard-space: 0px; }', sheet.cssRules.length)].style;
   }
-  keyboardRule.setProperty('--keyboard-space', `${next}px`);
-  keyboardHeight = next;
+  keyboardRule.setProperty('--keyboard-space', `${space}px`);
+  keyboardRule.setProperty('--keyboard-bottom', `${bottom}px`);
+  keyboardState = state;
 }

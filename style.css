@@ -80,7 +80,7 @@ section { animation: fade .35s ease both; }
 .writing-meta { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 16px; }
 .writing-meta time { margin-left: auto; min-width: 9em; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 
-/* The mirror gives the textarea a stable, content-sized height. */
+/* The mirror sizes the textarea. */
 .editor { display: grid; min-height: 8em; font-size: 26px; }
 #text, #measure, #stage, #fallback, #notice {
   font: 26px/1.65 var(--serif);
@@ -121,7 +121,7 @@ section { animation: fade .35s ease both; }
 .intro p:last-child { margin-bottom: 0; }
 .intro a, .page a { color: var(--fg); text-decoration: underline; text-underline-offset: 4px; }
 
-/* Replay scrolls in the document; its controls stay reachable. */
+/* Controls follow the visible viewport. */
 #paused { min-height: 1.65em; margin: 0 0 24px; color: var(--dim); font-size: 14px; opacity: 0; transition: opacity .25s ease; }
 #paused.on { opacity: 1; }
 #stage { min-height: 8em; }
@@ -131,15 +131,16 @@ section { animation: fade .35s ease both; }
 .done .caret { display: none; }
 @keyframes blink { 0%, 35% { opacity: 1; } 50%, 85% { opacity: 0; } 100% { opacity: 1; } }
 .set { display: flex; flex: 1; min-width: 0; align-items: baseline; gap: 24px; flex-wrap: wrap; }
-.playback {
+.playback, .write-tools {
   position: sticky;
-  bottom: 0;
+  bottom: var(--keyboard-bottom, 0px);
   z-index: 1;
   padding-block: 12px max(12px, env(safe-area-inset-bottom));
   margin-top: 16px;
   background: var(--bg);
-  font-size: 14px;
 }
+.playback { font-size: 14px; }
+.write-tools .meter { margin-top: 0; }
 #controls button { color: var(--dim); }
 #controls #toggle, #controls [aria-pressed="true"] { color: var(--fg); }
 .playback-row { margin: 0; }
@@ -147,7 +148,6 @@ section { animation: fade .35s ease both; }
 .ends { display: flex; margin-left: auto; white-space: nowrap; }
 .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: pre-wrap; }
 
-/* The about page uses the same reading width, type and quiet rhythm. */
 .lead { margin: 0 0 48px; font: 32px/1.4 var(--serif); letter-spacing: -.025em; }
 .page h2 { margin: 40px 0 16px; font: 22px/1.4 var(--serif); letter-spacing: -.015em; }
 .page .next { margin-top: 48px; }
@@ -157,6 +157,8 @@ section { animation: fade .35s ease both; }
   header { padding-top: 24px; }
   main { padding-top: 40px; padding-bottom: 32px; }
   .brand { font-size: 24px; }
+  .writing-meta { flex-direction: column; }
+  .writing-meta time { margin-left: 0; text-align: left; white-space: normal; }
   .editor, #text, #measure, #stage, #notice { font-size: 23px; }
   .editor, #stage { min-height: 7em; }
   .intro { margin-top: 40px; padding-top: 24px; }
