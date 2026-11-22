@@ -15,12 +15,12 @@ Ignored local planning and deployment notes may be out of date. This file and th
 Breaking any of these is a bug, even if tests pass.
 
 1. **Static only.** Cloudflare Pages serves plain files. No `functions/`, `_worker.js` or `_routes.json`.
-2. **No dependencies, frameworks or build step for the site.** Plain ES modules, served as written. Node is for tests and `tools/` only.
+2. **No frameworks or build step for the site.** Plain ES modules, served as written. The sole vendored dependency is gifenc 1.0.3 for browser-local GIF export (`js/vendor/`, with its licence). Node is for tests and `tools/` only.
 3. **No third-party requests.** The CSP in `_headers` allows `'self'` only: no inline `<script>`, no `style=""`, no CDN.
-4. **Post text reaches the page only via `textContent` or text nodes, never `innerHTML`.** Links are untrusted input.
+4. **Post text reaches the DOM only via `textContent` or text nodes, never `innerHTML`.** GIF export draws text onto Canvas. Links are untrusted input.
 5. **Keep links compatible.** V1 is pre-release; changes are allowed when explicitly requested. Preserve decoding of original v1 links and all golden fixtures. Once released, freeze `js/codec/v1.js`, including its delay table; later formats use a new file registered in `js/codec/index.js`. Old decoders are never removed.
 6. **Golden fixtures are permanent.** In `tests/fixtures/v*/`, only add files; never edit or delete.
-7. **Budget (gzipped):** code (HTML + CSS + JS) ≤ 20 KB, font ≤ 25 KB, first load ≤ 50 KB. Replay at 60 fps.
+7. **Budget (gzipped):** total code (HTML + CSS + JS) ≤ 40 KB, font ≤ 25 KB, first load ≤ 50 KB. Export-only worker/encoder code is excluded from first load. Replay at 60 fps.
 8. **Design:**
    - Two colours: `#FAFAF7` and `#111111`, swapped in dark mode. Secondary text at 45% opacity.
    - Buttons are plain text: no boxes, shadows, icons or emoji.
@@ -46,6 +46,9 @@ js/writer.js          writing screen: meter, draft autosave, share
 js/player.js          replay: clock, controls, pauses, end state, blocklist
 js/viewport.js        document scrolling and mobile keyboard space
 js/time.js            shared GMT date/time display for writer and replay
+js/replay-timing.js   shared replay timeline and pause labels
+js/gif-*.js           GIF eligibility, drawing, sharing and background encoding
+js/vendor/           pinned gifenc encoder and licence (loaded for export only)
 js/store.js           localStorage (wmt:draft, wmt:posts)
 js/codec/             link format: index.js (versions), v1.js, bytes.js (helpers)
 docs/                 README demo GIF; never deployed with the site
@@ -71,7 +74,7 @@ tools/                serve, build, smoke, blockhash
 - **The recorder never looks at keys.** It diffs old and new textarea values, which is why IME, swipe, undo and autocorrect all work. Don't add key handling.
 - **Text is normalized before diffing:** line endings become `\n`, control characters are stripped, and lone surrogates become U+FFFD.
 - **The decoder is defensive.** Every length, jump and delete is bounds-checked, inflate is capped at 64 KB, and the checksum must match. Failures are always a `LinkError`, never another exception. Add a hostile test for any new field.
-- **New served files** go in `SITE` in `tools/build.mjs`, or they won't deploy. New JS modules also go in `tools/smoke.mjs` and the `modulepreload` links.
+- **New served files** go in `SITE` in `tools/build.mjs`, or they won't deploy (`js/` is copied recursively). New JS modules also go in `tools/smoke.mjs` and the `modulepreload` links, except worker-only modules, which smoke checks fetch separately and the document must not preload.
 - **Fonts are cached for a year.** Changing the font means a new file name.
 - **JS/CSS and the blocklist revalidate on request.** Keep their `Cache-Control: no-cache` headers; the player caches blocklist data in memory for five minutes. After deployment, smoke checks must confirm the live cache policy. In Cloudflare, Browser Cache TTL should respect existing headers; an override can serve outdated decoders even after a release.
 - **Browser asset revision:** JS imports, module preloads and stylesheet links currently use `?r=2` to bypass old cached assets. Keep those references consistent. This is an asset cache key, separate from the recording’s `#1` link format.
@@ -84,6 +87,9 @@ tools/                serve, build, smoke, blockhash
 
 - The agreed share message is the finished post, one blank line, then `watch it → FULL_URL`. Keep this format unchanged unless requested.
 - Keep one **share** action: mobile share sheet where available, otherwise clipboard with a manual-copy fallback. Do not add a separate copy-link button unless requested.
+- Eligible recordings offer link or GIF from that share action. GIF is file-only, with persistent `watchmetype.com` branding and the recorded GMT edit time (omit missing timestamps). Limits: 140 code points at every stage, 300 events, 30 seconds including start/end holds, four readable lines and 8 MiB output. Over-limit recordings use the existing link flow. GIF uses decoded 1× replay timing, 1.2-second long pauses, a 0.6-second lead, a 0.5-second tail and a three-second finished hold; no automatic acceleration. Quantize absolute frame times to 20 ms and merge identical frames without shortening holds.
+- GIF layout is wide: 600 × 360 logical pixels, rendered at 2× (1200 × 720) with up to 256 palette colours. Choose the largest of 48, 40 and 32 logical pixels that fits all original edit states within four lines and the text area, then keep that size fixed for every frame, including worker and regular Canvas output. No header branding, tagline or witness footer inside the GIF. Put the recorded GMT timestamp bottom-left and `watchmetype.com` bottom-right. Hide the link option after choosing **make gif**; reopening share restores the format choice.
+- Below the writer's share row, use the existing muted hint area for a specific GIF-unavailable reason. Check the decoded recording and every intermediate layout, using the same gates as export. Keep link sharing enabled. Temporary typing/copy hints take priority. Opening share focuses the dialog itself; preserve visible keyboard focus on its buttons.
 - Writer: `your words, at your pace`. Replay: `a thought, taking shape.`. Use the same last-edited GMT date/time formatter on both screens: right-aligned on desktop, stacked below the tagline and left-aligned on small screens.
 - Authors with a locally saved recording see **continue editing**; other viewers see **type your own**. These are mutually exclusive, on the right of the playback controls. Grey replay stats sit below that row.
 - `marketing/` stays ignored. Copy any README artwork into `docs/`; documentation assets do not belong in the deploy allowlist.

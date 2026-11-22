@@ -5,6 +5,7 @@ import { canCompress } from './codec/bytes.js?r=2';
 import * as store from './store.js?r=2';
 import { revealLine, keyboardSpace } from './viewport.js?r=2';
 import { showEdited } from './time.js?r=2';
+import { openGifShare, closeGifShare, gifUnavailable } from './gif-share.js?r=2';
 
 const EPOCH = Date.UTC(2026, 0, 1);
 const SAVE_MS = 300;
@@ -29,6 +30,8 @@ let meterTimer = 0;
 let hintTimer = 0;
 let labelTimer = 0;
 let layoutFrame = 0;
+let gifHint = '';
+let stickyHint = false;
 
 let support = null;
 function supported() {
@@ -70,6 +73,8 @@ function save() {
 function hint(message, sticky) {
   clearTimeout(hintTimer);
   el.hint.textContent = message;
+  el.hint.classList.toggle('gif-unavailable', false);
+  stickyHint = Boolean(sticky);
   hintTimer = sticky ? 0 : setTimeout(restHint, HINT_MS);
 }
 
@@ -77,7 +82,8 @@ function restHint() {
   clearTimeout(hintTimer);
   hintTimer = 0;
   if (!supported()) el.hint.textContent = 'Please update your browser to use this.';
-  else el.hint.textContent = rec.events.length >= NEAR_EVENTS ? LONG_HINT : '';
+  else el.hint.textContent = rec.events.length >= NEAR_EVENTS ? LONG_HINT : gifHint;
+  el.hint.classList.toggle('gif-unavailable', Boolean(gifHint) && el.hint.textContent === gifHint);
 }
 
 function layout() {
@@ -111,7 +117,7 @@ function build() {
     const data = await encode({ id: meta.id, createdDay: meta.day, editedAt: meta.at, events: rec.events });
     const back = await decode(data);
     if (back.text !== text) throw new Error('link check failed');
-    return { url: `${location.origin}/#${data}`, text };
+    return { url: `${location.origin}/#${data}`, text, model: back };
   })();
   const entry = { n, promise, result: null };
   built = entry;
@@ -137,16 +143,22 @@ async function showSize() {
   meterTimer = 0;
   if (!rec.events.length || !supported()) {
     el.size.textContent = '';
+    gifHint = '';
     return;
   }
+  const source = rec;
   const n = rec.events.length;
   try {
-    const { url } = await build();
-    if (!active || rec.events.length !== n) return;
+    const { url, model } = await build();
+    if (!active || rec !== source || rec.events.length !== n) return;
     el.size.textContent = `link ${(url.length / 1000).toFixed(1)} KB`;
     el.size.classList.toggle('near', url.length >= NEAR_BYTES);
+    const reason = await gifUnavailable(model);
+    if (!active || rec !== source || rec.events.length !== n) return;
+    gifHint = reason;
+    if (!hintTimer && !stickyHint) restHint();
   } catch {
-    if (active && rec.events.length === n) el.size.textContent = '';
+    if (active && rec === source && rec.events.length === n) el.size.textContent = '';
   }
 }
 
@@ -170,6 +182,9 @@ function onInput(e) {
   showCount();
   if (rec.events.length === before) return;
   meta.at = Date.now();
+  stickyHint = false;
+  if (!rec.text.trim()) gifHint = '';
+  closeGifShare();
   showEdited(el.edited, meta.at);
   el.fallback.hidden = true;
   el.watch.hidden = true;
@@ -203,12 +218,22 @@ async function onShare() {
     hint('Your draft changed. Share again.');
     return;
   }
-  const { url, text } = ready;
+  const { url } = ready;
   store.savePost({ ...meta, events: rec.events });
   save();
   el.watch.href = url;
   el.watch.hidden = false;
   el.fallback.hidden = true;
+  const isCurrent = () => active && rec === source && rec.events.length === n;
+  try {
+    if (await openGifShare(ready.model, () => shareLink(ready, source, n), isCurrent)) return;
+  } catch {
+    // A missing export capability must never prevent sharing the original link.
+  }
+  if (isCurrent()) await shareLink(ready, source, n);
+}
+
+async function shareLink({ url, text }, source, n) {
   const message = `${text}\n\nwatch it → ${url}`;
 
   if (navigator.share && matchMedia('(pointer: coarse)').matches) {
@@ -221,7 +246,7 @@ async function onShare() {
   }
   try {
     await navigator.clipboard.writeText(message);
-    setLabel('copied');
+    if (active && rec === source && rec.events.length === n) setLabel('copied');
     return;
   } catch {}
   if (!active || rec !== source || rec.events.length !== n) return;
@@ -239,6 +264,7 @@ function confirmNew(open) {
 }
 
 function onNew() {
+  closeGifShare();
   fresh();
   save();
   built = null;
@@ -248,6 +274,8 @@ function onNew() {
 }
 
 function render() {
+  gifHint = '';
+  stickyHint = false;
   confirmNew(false);
   el.text.value = rec.text;
   el.fallback.hidden = true;
@@ -338,6 +366,7 @@ export function show() {
 export function hide() {
   if (!active) return;
   active = false;
+  closeGifShare();
   if (el.screen.contains(document.activeElement)) document.activeElement.blur();
   keyboardSpace(false);
   cancelAnimationFrame(layoutFrame);

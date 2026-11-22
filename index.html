@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>watchmetype</title>
-<meta name="description" content="Write up to 500 characters and share a typing replay. Watch every pause, typo and edit. No account needed.">
+<meta name="description" content="Write up to 500 characters and share a typing replay by link, or turn a short post into a gif. No account needed.">
 <link rel="canonical" href="https://watchmetype.com/">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#FAFAF7" media="(prefers-color-scheme: light)">
@@ -12,7 +12,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="watchmetype">
 <meta property="og:title" content="watchmetype">
-<meta property="og:description" content="Watch the typing replay.">
+<meta property="og:description" content="Share a typing replay by link, or turn a short post into a gif.">
 <meta property="og:locale" content="en_US">
 <meta property="og:url" content="https://watchmetype.com/">
 <meta name="twitter:card" content="summary">
@@ -31,6 +31,10 @@
 <link rel="modulepreload" href="/js/store.js?r=2">
 <link rel="modulepreload" href="/js/viewport.js?r=2">
 <link rel="modulepreload" href="/js/time.js?r=2">
+<link rel="modulepreload" href="/js/replay-timing.js?r=2">
+<link rel="modulepreload" href="/js/gif-model.js?r=2">
+<link rel="modulepreload" href="/js/gif-render.js?r=2">
+<link rel="modulepreload" href="/js/gif-share.js?r=2">
 <link rel="modulepreload" href="/js/codec/index.js?r=2">
 <link rel="modulepreload" href="/js/codec/v1.js?r=2">
 <link rel="modulepreload" href="/js/codec/bytes.js?r=2">
@@ -49,7 +53,7 @@
       "@type": "WebApplication",
       "name": "watchmetype",
       "url": "https://watchmetype.com/",
-      "description": "Write up to 500 characters and share a typing replay. Watch every pause, typo and edit. No account needed.",
+      "description": "Write up to 500 characters and share a typing replay by link, or turn a short post into a gif. No account needed.",
       "applicationCategory": "UtilitiesApplication",
       "operatingSystem": "Any",
       "browserRequirements": "CompressionStream and DecompressionStream with deflate-raw support",
@@ -86,8 +90,8 @@
       <div id="new-prompt" hidden>
         <p id="new-question" class="quiet" role="status">Clear this draft and start a new post?</p>
         <div class="row actions">
-          <button id="cancel-new" type="button" aria-describedby="new-question">cancel</button>
           <button id="start-new" type="button">start new</button>
+          <button id="cancel-new" type="button" aria-describedby="new-question">cancel</button>
         </div>
       </div>
     </div>
@@ -95,7 +99,7 @@
     <textarea id="fallback" rows="6" readonly hidden aria-label="Text to copy"></textarea>
     <div class="intro quiet">
       <h1>let them watch your words arrive.</h1>
-      <p>Write up to 500 characters. Share a link to watch them arrive.</p>
+      <p>Write up to 500 characters. Share a typing replay by link, or turn a short post into a gif.</p>
       <p id="writing-note">Pasting is off. Deleted words stay in the replay.</p>
       <p>Your draft is saved in this browser. <a href="/about">how it works</a></p>
     </div>
@@ -128,6 +132,20 @@
 
   <noscript><p>watchmetype needs JavaScript to record and replay typing.</p></noscript>
 </main>
+
+<dialog id="share-dialog" aria-labelledby="share-title" aria-describedby="gif-status">
+  <div class="row share-heading"><h2 id="share-title">share</h2><button id="close-share" type="button">close</button></div>
+  <p id="gif-status" class="quiet" role="status"></p>
+  <div class="row share-choices">
+    <button id="share-link" type="button">share as link</button>
+    <button id="make-gif" type="button">make gif</button>
+  </div>
+  <img id="gif-preview" width="1200" height="720" alt="Your typing replay as a gif" hidden>
+  <div id="gif-file-actions" class="row" hidden>
+    <button id="share-gif" type="button">share gif</button>
+    <a id="download-gif" download="watchmetype.gif">download gif</a>
+  </div>
+</dialog>
 
 <footer><span class="footer-note">a witness, not a proof.</span><a href="/about">about watchmetype</a></footer>
 </body>

@@ -97,13 +97,21 @@ for (const [, path] of html.matchAll(/(?:href|src)="(\/(?:js\/[^"?#]+\.js|style\
 }
 const modules = [
   'app.js', 'writer.js', 'player.js', 'recorder.js', 'input-guard.js', 'store.js', 'viewport.js',
-  'time.js', 'codec/index.js', 'codec/v1.js', 'codec/bytes.js',
+  'time.js', 'replay-timing.js', 'gif-model.js', 'gif-render.js', 'gif-share.js',
+  'codec/index.js', 'codec/v1.js', 'codec/bytes.js',
 ];
 const staleModules = [];
 for (const m of modules) {
   const path = assetURLs.get(`/js/${m}`);
   check(Boolean(path), `/js/${m} is referenced by the app shell`);
   if (!path) continue;
+  const res = await get(path);
+  check(res.ok && /javascript/.test(res.headers.get('content-type') || ''), `${path} is served as JavaScript`);
+  if (!revalidates(res)) staleModules.push(path);
+}
+// Worker-only modules intentionally aren't preloaded by the document.
+for (const m of ['gif-worker.js', 'vendor/gifenc.js']) {
+  const path = `/js/${m}?r=2`;
   const res = await get(path);
   check(res.ok && /javascript/.test(res.headers.get('content-type') || ''), `${path} is served as JavaScript`);
   if (!revalidates(res)) staleModules.push(path);

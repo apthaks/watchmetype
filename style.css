@@ -45,6 +45,7 @@ section{animation:fade .35s ease both}
 #new-question{margin:4px 0 0;font-size:.875rem}
 #share{min-width:3.5em;text-align:right}
 #hint{margin:0;min-height:1.65em;font-size:.875rem}
+#hint.gif-unavailable{text-align:right}
 .intro{margin-top:32px;padding-top:28px;border-top:1px solid var(--dim)}
 .intro h1{margin:0 0 12px;font:1.25rem/1.4 var(--serif);letter-spacing:-.02em;color:var(--fg)}
 .intro p{margin:0 0 8px;color:var(--dim)}
@@ -88,6 +89,17 @@ section{animation:fade .35s ease both}
 .lead{margin:0 0 48px;font:32px/1.4 var(--serif);letter-spacing:-.025em}
 .page h2{margin:40px 0 16px;font:22px/1.4 var(--serif);letter-spacing:-.015em}
 .page .next{margin-top:48px}
+#share-dialog{width:min(640px,calc(100vw - 32px));max-height:90svh;overflow:auto;padding:24px;border:1px solid var(--dim);background:var(--bg);color:var(--fg)}
+#share-dialog::backdrop{background:rgb(17 17 17 / .65);backdrop-filter:blur(4px)}
+#share-dialog:focus{outline:none}
+.share-heading{margin:0}
+.share-heading h2{margin:0;font:24px/1.4 var(--serif)}
+#share-dialog button,#share-dialog a{min-height:44px;padding-block:12px}
+#gif-status{margin:8px 0;min-height:1.65em;font-size:.875rem}
+.share-choices{margin-top:0;justify-content:flex-start;gap:28px}
+#close-share{color:var(--dim)}
+#gif-preview{display:block;width:100%;height:auto;margin-top:16px}
+#gif-file-actions{flex-wrap:wrap;justify-content:flex-end;gap:28px;margin-top:4px}
 @media (max-width:600px){:root{--post-size:1.4375rem}
 header,main,footer{padding-inline:24px}
 header{padding-top:24px}
