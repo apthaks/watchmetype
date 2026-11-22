@@ -29,6 +29,7 @@ let meterTimer = 0;
 let hintTimer = 0;
 let labelTimer = 0;
 let layoutFrame = 0;
+let following = false;
 
 let support = null;
 function supported() {
@@ -86,7 +87,7 @@ function layout() {
     const focused = active && document.activeElement === el.text;
     keyboardSpace(active);
     if (!focused || composing) return;
-    // Locate the caret on its wrapped line in the mirror.
+    el.text.scrollTop = 0;
     const node = el.measure.firstChild;
     if (!node) return;
     const caret = el.text.selectionDirection === 'backward' ? el.text.selectionStart : el.text.selectionEnd;
@@ -95,16 +96,20 @@ function layout() {
     range.setStart(node, at);
     range.setEnd(node, at + 1);
     revealLine(range.getBoundingClientRect(), el.tools.offsetHeight + 24);
-    el.text.scrollTop = 0;
   });
 }
 
 function measure() {
+  following = true;
   el.measure.textContent = el.text.value + '\u200b';
   layout();
 }
 
-// Self-check the link before sharing it.
+function settle() {
+  keyboardSpace(active);
+  if (following) layout();
+}
+
 function build() {
   const n = rec.events.length;
   if (built && built.n === n) return built.promise;
@@ -293,12 +298,17 @@ function bind() {
   el.text.addEventListener('focus', layout);
   el.text.addEventListener('blur', layout);
   el.text.addEventListener('select', layout);
+  el.text.addEventListener('scroll', settle);
   document.addEventListener('selectionchange', () => {
     if (active && document.activeElement === el.text) layout();
   });
   addEventListener('resize', layout);
+  addEventListener('scroll', settle);
+  for (const type of ['touchmove', 'wheel']) {
+    addEventListener(type, () => { following = false; }, { passive: true });
+  }
   window.visualViewport?.addEventListener('resize', layout);
-  window.visualViewport?.addEventListener('scroll', () => keyboardSpace(active));
+  window.visualViewport?.addEventListener('scroll', settle);
   document.fonts.ready.then(layout);
   addEventListener('pagehide', () => active && save());
   document.addEventListener('visibilitychange', () => {
@@ -321,6 +331,7 @@ export function show() {
 export function hide() {
   if (!active) return;
   active = false;
+  following = false;
   if (el.screen.contains(document.activeElement)) document.activeElement.blur();
   keyboardSpace(false);
   cancelAnimationFrame(layoutFrame);
