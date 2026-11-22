@@ -3,10 +3,8 @@ import { canCompress, blockKey } from './codec/bytes.js?r=2';
 import * as store from './store.js?r=2';
 import { revealLine } from './viewport.js?r=2';
 import { showEdited } from './time.js?r=2';
+import { replaySteps, LEAD_MS, TAIL_MS, pauseLabel } from './replay-timing.js?r=2';
 
-const LEAD_MS = 600;
-const PAUSE_MS = 1200;
-const TAIL_MS = 500;
 const TYPING_MS = 450;
 const LIST_TTL = 300000;
 
@@ -54,13 +52,6 @@ function blocklist() {
 
 function plural(n, unit) {
   return `${n} ${unit}${n === 1 ? '' : 's'}`;
-}
-
-function pauseLabel(sec) {
-  if (sec < 60) return `paused ${sec} s`;
-  if (sec < 3600) return `paused ${Math.round(sec / 60)} min`;
-  if (sec < 172800) return `paused ${Math.round(sec / 3600)} h`;
-  return `paused ${plural(Math.round(sec / 86400), 'day')}`;
 }
 
 function duration(ms) {
@@ -208,16 +199,12 @@ function setSpeed(value) {
 function start(model) {
   post = model;
   showEdited(el.edited, model.editedAt);
-  let at = 0;
   let total = 0;
   let deletions = 0;
-  steps = model.events.map((e, i) => {
-    if (i) {
-      at += e.pauseSec != null ? PAUSE_MS : e.t;
-      total += e.t;
-    }
+  steps = replaySteps(model.events);
+  model.events.forEach((e, i) => {
+    if (i) total += e.t;
     deletions += e.del;
-    return { at, pos: e.pos, del: e.del, ins: [...e.ins], pause: i ? e.pauseSec : undefined };
   });
 
   el.final.textContent = model.text;

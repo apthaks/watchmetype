@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GIF preview · watchmetype</title>
+<link rel="stylesheet" href="/style.css?r=2">
+<link rel="stylesheet" href="/tests/browser/gif.css">
+<script type="module" src="/tests/browser/gif.js"></script>
+</head>
+<body>
+<header><a class="brand" href="/">watchmetype</a></header>
+<main>
+<h1>gif preview</h1>
+<p class="quiet">Local test recording: a typo, deletion, retyping and a long pause. Your draft stays untouched.</p>
+<p><label>Theme <select id="theme"><option value="light">light</option><option value="dark">dark</option></select></label></p>
+<p><label><input type="checkbox" id="fallback"> use regular Canvas fallback</label></p>
+<button id="generate" type="button">generate sample</button>
+<p id="status" role="status" class="quiet"></p>
+<img id="preview" width="1200" height="720" alt="Sample typing GIF" hidden>
+<p><a id="download" download="watchmetype-sample.gif" hidden>download sample</a></p>
+<p class="quiet">Finished frame</p>
+<canvas id="final" width="1200" height="720"></canvas>
+</main>
+</body>
+</html>

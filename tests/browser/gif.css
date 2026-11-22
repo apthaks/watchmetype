@@ -1,0 +1,5 @@
+main{padding-top:32px}
+h1{font:24px Fraunces,serif}
+select{font:inherit;color:var(--fg);background:var(--bg)}
+#preview,#final{display:block;width:100%;height:auto}
+#generate{padding-block:12px}

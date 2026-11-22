@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { decode } from '../js/codec/index.js';
 
 async function writer(t, name) {
-  const elements = new Map(), storage = new Map(), copied = [], frames = new Map();
-  let frame = 0;
+  const elements = new Map(), storage = new Map(), copied = [], frames = new Map(), timers = new Map();
+  let frame = 0, timer = 0;
   const node = () => ({
     value: '', textContent: '', hidden: true, listeners: new Map(),
     classList: { toggle() {} },
@@ -21,7 +21,8 @@ async function writer(t, name) {
     addEventListener() {},
     requestAnimationFrame: fn => { frames.set(++frame, fn); return frame; },
     cancelAnimationFrame: id => frames.delete(id),
-    setTimeout: () => 1, clearTimeout() {}, matchMedia: () => ({ matches: false }),
+    setTimeout: (fn, ms) => { timers.set(++timer, { fn, ms }); return timer; },
+    clearTimeout: id => timers.delete(id), matchMedia: () => ({ matches: false }),
     localStorage: {
       getItem: key => storage.get(key) ?? null,
       setItem: (key, value) => storage.set(key, value), removeItem: key => storage.delete(key),
@@ -38,6 +39,10 @@ async function writer(t, name) {
   return {
     ...app, elements, storage, copied,
     layout() { const queued = [...frames.values()]; frames.clear(); for (const fn of queued) fn(); },
+    async runTimers(ms) {
+      const batch = [...timers].filter(([, timer]) => timer.ms === ms);
+      for (const [id, timer] of batch) { timers.delete(id); await timer.fn(); }
+    },
     type(value) { const text = elements.get('text'); text.value = value; text.listeners.get('input')({}); },
     share() { return elements.get('share').listeners.get('click')(); },
   };
@@ -155,4 +160,51 @@ test('A delayed clipboard failure cannot reopen fallback after leaving the write
   reject(new Error('Denied'));
   await pending;
   assert.equal(app.elements.get('fallback').hidden, true);
+});
+
+test('A delayed clipboard success cannot label a different draft as copied', async t => {
+  const app = await writer(t, 'late-copy-success');
+  let resolve;
+  navigator.clipboard.writeText = () => new Promise(done => { resolve = done; });
+  app.type('First draft');
+  const pending = app.share();
+  while (!resolve) await new Promise(done => setImmediate(done));
+  app.type('Second draft');
+  resolve();
+  await pending;
+  assert.equal(app.elements.get('share').textContent, 'share');
+});
+
+test('Long recordings share the original link directly even when GIF workers are supported', async t => {
+  const app = await writer(t, 'gif-ineligible');
+  globalThis.Worker = function () { throw new Error('over-limit recordings must not start a worker'); };
+  t.after(() => { delete globalThis.Worker; });
+  app.type('a'.repeat(141));
+  app.type('short finished text');
+  await app.share();
+  assert.equal(app.copied.length, 1);
+  assert.match(app.copied[0], /^short finished text\n\nwatch it → https:\/\/watchmetype.com\/#1/);
+  assert.equal(app.elements.has('share-dialog'), false);
+});
+
+test('GIF availability explains historical overflow, preserves typing hints and resets for a new post', async t => {
+  const app = await writer(t, 'gif-hint');
+  const hint = app.elements.get('hint');
+  assert.equal(hint.textContent, '');
+  app.type('a'.repeat(141));
+  await app.runTimers(500);
+  assert.equal(hint.textContent, 'too much text for a readable gif · share by link');
+  assert.equal(app.elements.get('share').disabled, false);
+
+  app.type('short');
+  app.elements.get('text').listeners.get('paste')({ preventDefault() {} });
+  await app.runTimers(500);
+  assert.equal(hint.textContent, 'Pasting is off — type it.');
+  await app.runTimers(2500);
+  assert.equal(hint.textContent, 'too much text for a readable gif · share by link');
+
+  window.scrollTo = () => {};
+  app.elements.get('new').listeners.get('click')();
+  app.elements.get('start-new').listeners.get('click')();
+  assert.equal(hint.textContent, '');
 });
