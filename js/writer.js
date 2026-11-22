@@ -19,11 +19,11 @@ const $ = (id) => document.getElementById(id);
 
 let el;
 let rec;
-let meta; // { id, day, at }
+let meta;
 let active = false;
 let composing = false;
 let refreshGuard;
-let built = null; // { n, promise, result }
+let built = null;
 let saveTimer = 0;
 let meterTimer = 0;
 let hintTimer = 0;
@@ -233,10 +233,14 @@ async function onShare() {
   hint('Automatic sharing is unavailable. Copy the selected text and link.', true);
 }
 
+function confirmNew(open) {
+  el.prompt.hidden = !open;
+  el.actions.hidden = open;
+}
+
 function onNew() {
-  if (rec.events.length && !confirm('Start a new post? This clears the one you’re writing.')) return;
-  store.clearDraft();
   fresh();
+  save();
   built = null;
   render();
   window.scrollTo({ top: 0, behavior: 'auto' });
@@ -244,6 +248,7 @@ function onNew() {
 }
 
 function render() {
+  confirmNew(false);
   el.text.value = rec.text;
   el.fallback.hidden = true;
   el.watch.hidden = true;
@@ -267,6 +272,8 @@ function bind() {
     size: $('size'),
     share: $('share'),
     fresh: $('new'),
+    prompt: $('new-prompt'),
+    actions: $('write-actions'),
     watch: $('watch'),
     hint: $('hint'),
     fallback: $('fallback'),
@@ -278,7 +285,7 @@ function bind() {
   });
   el.text.addEventListener('compositionend', () => {
     composing = false;
-    // Some browsers fire the last input before compositionend, some after.
+    // Let the final input event run first.
     setTimeout(() => active && onInput(), 0);
   });
   el.share.addEventListener('pointerdown', () => {
@@ -288,7 +295,18 @@ function bind() {
   el.tools.addEventListener('pointerdown', (e) => {
     if (document.activeElement === el.text && e.target.closest('button, a')) e.preventDefault();
   });
-  el.fresh.addEventListener('click', onNew);
+  const cancel = $('cancel-new');
+  el.fresh.addEventListener('click', () => {
+    confirmNew(true);
+    if (document.activeElement !== el.text) cancel.focus();
+    layout();
+  });
+  cancel.addEventListener('click', () => {
+    confirmNew(false);
+    el.text.focus({ preventScroll: true });
+    layout();
+  });
+  $('start-new').addEventListener('click', onNew);
   el.text.addEventListener('focus', layout);
   el.text.addEventListener('blur', layout);
   el.text.addEventListener('select', layout);

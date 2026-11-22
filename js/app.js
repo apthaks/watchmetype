@@ -1,5 +1,3 @@
-// Router: no hash → writing screen, hash → replay screen.
-
 import * as writer from './writer.js?r=2';
 import * as player from './player.js?r=2';
 
@@ -11,7 +9,6 @@ function route() {
   const link = location.hash.slice(1);
   if (link === shown) return;
   shown = link;
-  // Start a replay at the top, even after a long draft.
   window.scrollTo({ top: 0, behavior: 'auto' });
   if (link) {
     writer.hide();
@@ -27,7 +24,6 @@ function route() {
 addEventListener('hashchange', route);
 addEventListener('popstate', route);
 
-// Links back to the writing screen switch in place instead of reloading.
 document.addEventListener('click', (e) => {
   const home = e.target.closest && e.target.closest('a[data-home]');
   if (!home || e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;

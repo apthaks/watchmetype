@@ -1,15 +1,13 @@
-// Replay through text nodes on a requestAnimationFrame clock.
-
 import { decode } from './codec/index.js?r=2';
 import { canCompress, blockKey } from './codec/bytes.js?r=2';
 import * as store from './store.js?r=2';
 import { revealLine } from './viewport.js?r=2';
 import { showEdited } from './time.js?r=2';
 
-const LEAD_MS = 600; // wait before the first character
-const PAUSE_MS = 1200; // how long a long pause plays for
-const TAIL_MS = 500; // rest after the last edit before the end state
-const TYPING_MS = 450; // caret stays solid this long after an edit
+const LEAD_MS = 600;
+const PAUSE_MS = 1200;
+const TAIL_MS = 500;
+const TYPING_MS = 450;
 const LIST_TTL = 300000;
 
 const BROKEN = 'This link looks incomplete — the app you opened it in may have cut it off.';
@@ -21,13 +19,13 @@ const $ = (id) => document.getElementById(id);
 
 let el;
 let active = false;
-let token = 0; // bumps on every show/hide so stale async work is dropped
+let token = 0; // Ignore stale loads after navigation.
 
 let post = null;
-let steps = []; // [{ at, pos, del, ins: [code points], pause }]
+let steps = [];
 let chars = [];
 let cursor = 0;
-let next = 0; // index of the next step to apply
+let next = 0;
 let clock = 0;
 let speed = 1;
 let playing = false;
@@ -81,7 +79,7 @@ function draw() {
 
 function followLine() {
   if (following && playing && !ended) {
-    revealLine(el.caret.getBoundingClientRect(), el.controls.offsetHeight + 40);
+    revealLine(el.caret.getBoundingClientRect(), el.playback.offsetHeight + 24);
   }
 }
 
@@ -145,8 +143,7 @@ function finish() {
 
 function tick(now) {
   if (!playing) return;
-  // A gap this long means the tab was in the background, where frames stop:
-  // pick up where it left off instead of jumping ahead.
+  // Resume after background tabs stop receiving frames.
   const elapsed = now - lastFrame;
   clock += (elapsed > 1000 ? 16 : elapsed) * speed;
   lastFrame = now;
@@ -242,7 +239,7 @@ function clear() {
   post = null;
   playing = false;
   steps = [];
-  for (const node of [el.edited, el.stage, el.controls, el.stats, el.notice, el.keep, el.own]) node.hidden = true;
+  for (const node of [el.edited, el.stage, el.controls, el.follow, el.stats, el.notice, el.keep, el.own]) node.hidden = true;
   el.final.textContent = '';
   el.paused.classList.remove('on');
   labelShown = false;
@@ -255,7 +252,6 @@ function fail(message) {
   el.own.hidden = false;
 }
 
-// Continue the saved recording under the same post id.
 function keepEditing() {
   if (!post) return;
   const saved = store.getPost(post.id);
@@ -294,6 +290,7 @@ function bind() {
     final: $('final'),
     notice: $('notice'),
     controls: $('controls'),
+    playback: document.querySelector('.playback'),
     toggle: $('toggle'),
     skip: $('skip'),
     follow: $('follow'),
@@ -345,7 +342,6 @@ export async function show(link) {
   if (mine !== token) return;
   start(model);
 
-  // The blocklist never holds up the replay; a match takes the post down.
   try {
     const blocked = await list;
     if (blocked.length && blocked.includes(await blockKey(model.text)) && mine === token) fail(REMOVED);

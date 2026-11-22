@@ -65,6 +65,29 @@ test('Share stops if typing changes the draft during link preparation; retry sha
   assert.equal(saved.events.length, replay.events.length);
 });
 
+test('Starting a new post clears the draft only after inline confirmation', async t => {
+  const app = await writer(t, 'new-post');
+  window.scrollTo = () => {};
+  const click = id => app.elements.get(id).listeners.get('click')();
+  app.type('Keep this draft');
+  await app.share();
+  const draft = app.storage.get('wmt:draft');
+
+  click('new');
+  assert.equal(app.elements.get('new-prompt').hidden, false);
+  click('cancel-new');
+  assert.equal(app.elements.get('new-prompt').hidden, true);
+  assert.equal(app.elements.get('text').value, 'Keep this draft');
+  assert.equal(app.storage.get('wmt:draft'), draft);
+
+  click('new');
+  click('start-new');
+  assert.equal(app.elements.get('text').value, '');
+  assert.equal(app.elements.get('new').disabled, true);
+  assert.equal(app.storage.has('wmt:draft'), false);
+  assert.equal(app.storage.has('wmt:posts'), true);
+});
+
 test('Keyboard editing leaves caret scrolling to the native textarea, including blank lines', async t => {
   const app = await writer(t, 'native-scroll');
   const text = app.elements.get('text');
