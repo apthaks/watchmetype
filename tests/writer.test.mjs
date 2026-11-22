@@ -3,9 +3,7 @@ import assert from 'node:assert/strict';
 import { decode } from '../js/codec/index.js';
 
 async function writer(t, name) {
-  const elements = new Map(), storage = new Map(), copied = [], frames = new Map(), listeners = new Map();
-  const viewport = new EventTarget();
-  Object.assign(viewport, { height: 400, offsetTop: 80, scale: 1 });
+  const elements = new Map(), storage = new Map(), copied = [], frames = new Map();
   let frame = 0;
   const node = () => ({
     value: '', textContent: '', hidden: true, listeners: new Map(),
@@ -16,10 +14,11 @@ async function writer(t, name) {
   const globals = {
     document: {
       getElementById(id) { if (!elements.has(id)) elements.set(id, node()); return elements.get(id); },
-      fonts: { ready: Promise.resolve() }, documentElement: { clientHeight: 812 }, styleSheets: [], addEventListener() {},
+      fonts: { ready: Promise.resolve() }, styleSheets: [], addEventListener() {},
+      documentElement: { clientHeight: 812, classList: { toggle() {} } },
     },
-    window: { visualViewport: viewport }, location: { origin: 'https://watchmetype.com' },
-    addEventListener: (type, fn) => listeners.set(type, fn),
+    window: {}, location: { origin: 'https://watchmetype.com' },
+    addEventListener() {},
     requestAnimationFrame: fn => { frames.set(++frame, fn); return frame; },
     cancelAnimationFrame: id => frames.delete(id),
     setTimeout: () => 1, clearTimeout() {}, matchMedia: () => ({ matches: false }),
@@ -37,7 +36,7 @@ async function writer(t, name) {
   const app = await import(`../js/writer.js?${name}`);
   app.show();
   return {
-    ...app, elements, storage, copied, viewport, listeners,
+    ...app, elements, storage, copied,
     layout() { const queued = [...frames.values()]; frames.clear(); for (const fn of queued) fn(); },
     type(value) { const text = elements.get('text'); text.value = value; text.listeners.get('input')({}); },
     share() { return elements.get('share').listeners.get('click')(); },
@@ -66,51 +65,23 @@ test('Share stops if typing changes the draft during link preparation; retry sha
   assert.equal(saved.events.length, replay.events.length);
 });
 
-test('Caret follows late browser panning after newlines, but manual scrolling stops following', async t => {
-  const app = await writer(t, 'caret');
+test('Keyboard editing leaves caret scrolling to the native textarea, including blank lines', async t => {
+  const app = await writer(t, 'native-scroll');
   const text = app.elements.get('text');
-  const measure = app.elements.get('measure');
-  app.elements.get('write-tools').offsetHeight = 110;
   document.activeElement = text;
-  let lineTop = 650;
-  const scrolls = [];
-  window.scrollBy = ({ top }) => { scrolls.push(top); lineTop -= top; };
-  document.createRange = () => ({
-    setStart() {}, setEnd() {},
-    getBoundingClientRect() {
-      assert.equal(text.scrollTop, 0, 'reset native textarea scrolling before measuring');
-      return { top: lineTop, bottom: lineTop + 38, height: 38 };
-    },
-  });
-  Object.defineProperty(measure, 'firstChild', { get: () => ({ length: measure.textContent.length }) });
-  text.scrollTop = 38;
-  text.selectionEnd = 40;
-  app.type('D\n'.repeat(20));
+  window.visualViewport = { height: 360, offsetTop: 80, scale: 1 };
+  document.createRange = () => { throw new Error('mirror must not drive keyboard caret scrolling'); };
+  window.scrollBy = () => { throw new Error('do not scroll the document while the keyboard editor is active'); };
+  app.type('Hi\n' + '\nS'.repeat(35) + '\n\n');
+  text.scrollTop = 640;
   app.layout();
-  assert.equal(lineTop + 38, 480 - 134, 'entire line clears the toolbar');
-
-  // iOS can pan its viewport after our input frame has already completed.
-  app.viewport.offsetTop = 20;
-  app.viewport.dispatchEvent(new Event('scroll'));
+  assert.equal(text.scrollTop, 640, 'preserve native caret scroll after input');
+  window.visualViewport.offsetTop = 20;
   app.layout();
-  assert.equal(lineTop + 38, 420 - 134, 'late viewport movement reveals the line again');
-
-  lineTop += 100;
-  app.listeners.get('scroll')();
+  assert.equal(text.scrollTop, 640, 'viewport panning must not reset the textarea');
+  app.type(text.value + 'A wrapped line with 🙂 and more words');
   app.layout();
-  assert.equal(lineTop + 38, 420 - 134, 'late document scrolling is corrected too');
-
-  for (const type of ['touchmove', 'wheel']) {
-    app.type('D\n'.repeat(21));
-    app.layout();
-    app.listeners.get(type)();
-    lineTop += 100;
-    const before = scrolls.length;
-    app.viewport.dispatchEvent(new Event('scroll'));
-    app.listeners.get('scroll')();
-    app.layout();
-    assert.equal(scrolls.length, before, `${type} lets the reader scroll freely`);
-  }
+  assert.equal(text.scrollTop, 640);
 });
 
 test('Share drops an earlier attempt when the writer is reopened with the same event count', async t => {
@@ -123,4 +94,42 @@ test('Share drops an earlier attempt when the writer is reopened with the same e
   assert.deepEqual(app.copied, []);
   assert.equal(app.storage.has('wmt:posts'), false);
   assert.equal(app.elements.get('watch').hidden, true);
+});
+
+test('Unavailable clipboard exposes the complete share message from its beginning', async t => {
+  const app = await writer(t, 'manual-copy');
+  navigator.clipboard = undefined;
+  app.type('A thought 🙂');
+  const fallback = app.elements.get('fallback');
+  fallback.select = () => { fallback.scrollTop = 900; };
+  await app.share();
+  assert.equal(fallback.hidden, false);
+  assert.equal(fallback.scrollTop, 0);
+  assert.equal(fallback.value, `A thought 🙂\n\nwatch it → ${app.elements.get('watch').href}`);
+  assert.match(app.elements.get('hint').textContent, /Automatic sharing is unavailable/);
+  app.type('Another thought');
+  assert.equal(fallback.hidden, true);
+});
+
+test('A cancelled native share does not expose a copy box', async t => {
+  const app = await writer(t, 'cancel-share');
+  globalThis.matchMedia = () => ({ matches: true });
+  navigator.share = async () => { throw Object.assign(new Error(), { name: 'AbortError' }); };
+  app.type('A thought');
+  await app.share();
+  assert.equal(app.elements.get('fallback').hidden, true);
+  assert.deepEqual(app.copied, []);
+});
+
+test('A delayed clipboard failure cannot reopen fallback after leaving the writer', async t => {
+  const app = await writer(t, 'late-copy');
+  let reject;
+  navigator.clipboard.writeText = () => new Promise((_, fail) => { reject = fail; });
+  app.type('A thought');
+  const pending = app.share();
+  while (!reject) await new Promise(resolve => setImmediate(resolve));
+  app.hide();
+  reject(new Error('Denied'));
+  await pending;
+  assert.equal(app.elements.get('fallback').hidden, true);
 });

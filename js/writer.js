@@ -29,7 +29,6 @@ let meterTimer = 0;
 let hintTimer = 0;
 let labelTimer = 0;
 let layoutFrame = 0;
-let following = false;
 
 let support = null;
 function supported() {
@@ -85,9 +84,8 @@ function layout() {
   cancelAnimationFrame(layoutFrame);
   layoutFrame = requestAnimationFrame(() => {
     const focused = active && document.activeElement === el.text;
-    keyboardSpace(active);
-    if (!focused || composing) return;
-    el.text.scrollTop = 0;
+    const keyboard = keyboardSpace(active);
+    if (!focused || composing || keyboard) return;
     const node = el.measure.firstChild;
     if (!node) return;
     const caret = el.text.selectionDirection === 'backward' ? el.text.selectionStart : el.text.selectionEnd;
@@ -96,18 +94,13 @@ function layout() {
     range.setStart(node, at);
     range.setEnd(node, at + 1);
     revealLine(range.getBoundingClientRect(), el.tools.offsetHeight + 24);
+    el.text.scrollTop = 0;
   });
 }
 
 function measure() {
-  following = true;
   el.measure.textContent = el.text.value + '\u200b';
   layout();
-}
-
-function settle() {
-  keyboardSpace(active);
-  if (following) layout();
 }
 
 function build() {
@@ -157,7 +150,6 @@ async function showSize() {
   }
 }
 
-// Restore normalized text if the input was refused or cleaned.
 function reconcile() {
   const want = rec.text;
   const have = el.text.value;
@@ -232,11 +224,13 @@ async function onShare() {
     setLabel('copied');
     return;
   } catch {}
+  if (!active || rec !== source || rec.events.length !== n) return;
   el.fallback.value = message;
   el.fallback.hidden = false;
   el.fallback.focus();
   el.fallback.select();
-  hint('Copy this to share it.', true);
+  el.fallback.scrollTop = 0;
+  hint('Automatic sharing is unavailable. Copy the selected text and link.', true);
 }
 
 function onNew() {
@@ -298,17 +292,12 @@ function bind() {
   el.text.addEventListener('focus', layout);
   el.text.addEventListener('blur', layout);
   el.text.addEventListener('select', layout);
-  el.text.addEventListener('scroll', settle);
   document.addEventListener('selectionchange', () => {
     if (active && document.activeElement === el.text) layout();
   });
   addEventListener('resize', layout);
-  addEventListener('scroll', settle);
-  for (const type of ['touchmove', 'wheel']) {
-    addEventListener(type, () => { following = false; }, { passive: true });
-  }
   window.visualViewport?.addEventListener('resize', layout);
-  window.visualViewport?.addEventListener('scroll', settle);
+  window.visualViewport?.addEventListener('scroll', () => keyboardSpace(active));
   document.fonts.ready.then(layout);
   addEventListener('pagehide', () => active && save());
   document.addEventListener('visibilitychange', () => {
@@ -331,7 +320,6 @@ export function show() {
 export function hide() {
   if (!active) return;
   active = false;
-  following = false;
   if (el.screen.contains(document.activeElement)) document.activeElement.blur();
   keyboardSpace(false);
   cancelAnimationFrame(layoutFrame);
