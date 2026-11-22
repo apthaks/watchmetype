@@ -29,7 +29,6 @@ body {
   margin: 0;
   min-height: 100vh;
   min-height: 100svh;
-  padding-bottom: var(--keyboard-space, 0px);
   display: flex;
   flex-direction: column;
   background: var(--bg);
@@ -80,7 +79,6 @@ section { animation: fade .35s ease both; }
 .writing-meta { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 16px; }
 .writing-meta time { margin-left: auto; min-width: 9em; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 
-/* The mirror sizes the textarea. */
 .editor { display: grid; min-height: 8em; font-size: 26px; }
 #text, #measure, #stage, #fallback, #notice {
   font: 26px/1.65 var(--serif);
@@ -121,7 +119,6 @@ section { animation: fade .35s ease both; }
 .intro p:last-child { margin-bottom: 0; }
 .intro a, .page a { color: var(--fg); text-decoration: underline; text-underline-offset: 4px; }
 
-/* Controls follow the visible viewport. */
 #paused { min-height: 1.65em; margin: 0 0 24px; color: var(--dim); font-size: 14px; opacity: 0; transition: opacity .25s ease; }
 #paused.on { opacity: 1; }
 #stage { min-height: 8em; }
@@ -141,6 +138,25 @@ section { animation: fade .35s ease both; }
 }
 .playback { font-size: 14px; }
 .write-tools .meter { margin-top: 0; }
+.keyboard { overflow: hidden; }
+.keyboard #write {
+  position: fixed;
+  inset: var(--keyboard-top) 0 var(--keyboard-bottom);
+  z-index: 2;
+  max-width: 704px;
+  margin-inline: auto;
+  padding: 16px 24px;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+.keyboard .editor { flex: 1; min-height: 0; }
+.keyboard #measure, .keyboard .intro, .keyboard .writing-meta { display: none; }
+.keyboard #text { overflow: auto; overscroll-behavior: contain; }
+.keyboard .write-tools { position: static; flex-shrink: 0; }
+.keyboard #hint { min-height: 0; }
+.keyboard #fallback:not([hidden]) { flex: 1; }
+.keyboard #write:has(#fallback:not([hidden])) .editor { display: none; }
 #controls button { color: var(--dim); }
 #controls #toggle, #controls [aria-pressed="true"] { color: var(--fg); }
 .playback-row { margin: 0; }

@@ -78,7 +78,7 @@ tools/                serve, build, smoke, blockhash
 - **Don't change `blockKey()`**, or existing blocklist entries stop matching.
 - **Autocorrect replacement is blocked.** If it breaks typing on iOS, set `BLOCK_REPLACEMENT = false` in `js/input-guard.js`.
 - **Edit timestamps:** v1 flags `0` means an original link; flag `1` adds a varint of Unix minutes before the event count. Other flags are invalid. `editedAt` is optional on decoded models; never substitute the current time for a missing replay timestamp. Use `js/time.js` on both screens. The timestamp comes from the writer’s device clock.
-- **Scrolling:** writer and replay use document scrolling. Keep the writer’s meter and actions above the keyboard using the visual viewport’s height and offset. Leave room for them when revealing the caret. After typing, recheck the caret when the browser later scrolls the textarea, document or visual viewport; reset native textarea scrolling before measuring. Touch drags and wheel scrolling stop automatic following until the next input. Respect pinch zoom and let viewers stop following playback to scroll manually.
+- **Scrolling:** writer uses document scrolling with the keyboard closed. When the visual viewport shrinks by more than 120 px at normal zoom, `.keyboard` fits the writer to its visible bounds and lets the textarea scroll natively. Controls occupy a separate row below the textarea; the tagline, date and introduction return when the keyboard closes. Never reset textarea scrolling or reveal a mirror caret in keyboard mode. Respect pinch zoom. Replay keeps document scrolling and lets viewers stop following playback to scroll manually.
 
 ## Sharing and interface
 
